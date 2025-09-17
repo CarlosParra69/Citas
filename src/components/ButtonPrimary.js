@@ -1,15 +1,21 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import colors from '../utils/colors';
 
-const ButtonPrimary = ({ onPress, title, disabled }) => {
+const ButtonPrimary = ({ onPress, title, disabled, loading }) => {
+  const isDisabled = disabled || loading;
+  
   return (
     <TouchableOpacity
-      style={[styles.button, disabled && styles.disabled]}
+      style={[styles.button, isDisabled && styles.disabled]}
       onPress={onPress}
-      disabled={disabled}
+      disabled={isDisabled}
     >
-      <Text style={styles.text}>{title}</Text>
+      {loading ? (
+        <ActivityIndicator color={colors.white} size="small" />
+      ) : (
+        <Text style={styles.text}>{title}</Text>
+      )}
     </TouchableOpacity>
   );
 };

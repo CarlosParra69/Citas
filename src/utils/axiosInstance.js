@@ -1,12 +1,11 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_CONFIG } from "../config/api";
 
 const axiosInstance = axios.create({
-  baseURL: "http://tu-api-backend.com/api", // Cambiar por la URL real de tu API
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: API_CONFIG.HEADERS,
 });
 
 // Interceptor para agregar el token JWT
@@ -27,11 +26,19 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.log("Error de red:", error.message);
+    console.log("URL solicitada:", error.config?.url);
+    console.log("Método:", error.config?.method);
+    
+    if (error.code === 'ECONNABORTED') {
+      console.log("Error de timeout");
+    }
+    
     if (error.response?.status === 401) {
       // Manejar token expirado
       await AsyncStorage.removeItem("token");
-      // Redirigir a login si es necesario
     }
+    
     return Promise.reject(error);
   }
 );
