@@ -1,25 +1,41 @@
 import axiosInstance from "../utils/axiosInstance";
 
-export const getCitas = () => {
-  return axiosInstance.get("/citas");
+export const getCitas = async () => {
+  const response = await axiosInstance.get("/citas");
+  return response.data;
 };
 
-export const getCitaById = (id) => {
-  return axiosInstance.get(`/citas/${id}`);
+export const getCitaById = async (id) => {
+  const response = await axiosInstance.get(`/citas/${id}`);
+  return response.data;
 };
 
-export const getCitasHoy = () => {
-  return axiosInstance.get("/citas-hoy");
+export const getCitasHoy = async () => {
+  const response = await axiosInstance.get("/citas-hoy");
+  return response.data;
 };
 
-export const createCita = (citaData) => {
-  return axiosInstance.post("/citas", citaData);
+export const getProximasCitas = async () => {
+  const response = await axiosInstance.get("/proximas-citas");
+  return response.data;
 };
 
-export const updateCita = (id, citaData) => {
-  return axiosInstance.put(`/citas/${id}`, citaData);
+export const createCita = async (citaData) => {
+  const response = await axiosInstance.post("/citas", citaData);
+  return response.data;
 };
 
-export const cancelarCita = (id) => {
-  return axiosInstance.delete(`/citas/${id}`);
+export const updateCita = async (id, citaData) => {
+  const response = await axiosInstance.put(`/citas/${id}`, citaData);
+  return response.data;
+};
+
+export const cambiarEstadoCita = async (id, estadoData) => {
+  const response = await axiosInstance.patch(`/citas/${id}/estado`, estadoData);
+  return response.data;
+};
+
+export const cancelarCita = async (id) => {
+  const response = await axiosInstance.delete(`/citas/${id}`);
+  return response.data;
 };

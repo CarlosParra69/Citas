@@ -1,60 +1,133 @@
 import React, { useEffect, useState } from "react";
-import { View, FlatList, StyleSheet, Text } from "react-native";
-import Loader from "../../components/Loader";
+import { 
+  View, 
+  FlatList, 
+  StyleSheet, 
+  Text, 
+  RefreshControl, 
+  Alert 
+} from "react-native";
+import { getMedicos } from "../../api/medicos";
+import LoadingSpinner from "../../components/LoadingSpinner";
 import CardItem from "../../components/CardItem";
-import globalStyles from "../../styles/globalStyles";
+import colors from "../../utils/colors";
 
-const fakeMedicos = [
-  {
-    id: 1,
-    nombre: "Dra. Ana Torres",
-    especialidad: "Cardiología",
-    descripcion: "Especialista en corazón y circulación.",
-  },
-  {
-    id: 2,
-    nombre: "Dr. Luis Gómez",
-    especialidad: "Pediatría",
-    descripcion: "Atención médica para niños.",
-  },
-  {
-    id: 3,
-    nombre: "Dra. Marta Ruiz",
-    especialidad: "Dermatología",
-    descripcion: "Cuidado de la piel y tratamientos.",
-  },
-];
-
-const MedicosScreen = ({ navigation }) => {
+const MedicosScreen = ({ route, navigation }) => {
+  const { especialidadId, especialidadNombre } = route.params || {};
+  
   const [medicos, setMedicos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      setMedicos(fakeMedicos);
-      setLoading(false);
-    }, 800);
-  }, []);
+    loadMedicos();
+  }, [especialidadId]);
 
-  if (loading) return <Loader />;
+  useEffect(() => {
+    if (error) {
+      Alert.alert("Error", error);
+      setError(null);
+    }
+  }, [error]);
+
+  const loadMedicos = async () => {
+    try {
+      setError(null);
+      const params = especialidadId ? { especialidad_id: especialidadId } : {};
+      const response = await getMedicos(params);
+      
+      if (response.success) {
+        const medicosData = response.data || [];
+        setMedicos(medicosData);
+      } else {
+        throw new Error(response.message || "Error al cargar médicos");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.message || "Error de conexión";
+      setError(errorMessage);
+      console.error("Error loading medicos:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadMedicos();
+    setRefreshing(false);
+  };
+
+  const handleMedicoPress = (medico) => {
+    navigation.navigate("MedicoDetailScreen", { 
+      medicoId: medico.id,
+      medicoNombre: medico.nombre_completo || `${medico.nombre} ${medico.apellido}`
+    });
+  };
+
+  const renderMedico = ({ item }) => {
+    const nombreCompleto = item.nombre_completo || `${item.nombre} ${item.apellido}`;
+    const especialidadNombre = item.especialidad?.nombre || "Especialidad no especificada";
+    const registroMedico = item.registro_medico ? `Reg: ${item.registro_medico}` : "";
+    
+    return (
+      <CardItem
+        title={nombreCompleto}
+        subtitle={especialidadNombre}
+        description={registroMedico}
+        onPress={() => handleMedicoPress(item)}
+        rightContent={
+          <View style={styles.statusContainer}>
+            <View style={[
+              styles.statusDot, 
+              { backgroundColor: item.activo ? colors.success : colors.gray }
+            ]} />
+            <Text style={styles.statusText}>
+              {item.activo ? 'Activo' : 'Inactivo'}
+            </Text>
+          </View>
+        }
+      />
+    );
+  };
+
+  if (loading && !refreshing) {
+    return <LoadingSpinner message="Cargando médicos..." />;
+  }
+
+  const title = especialidadNombre ? `Médicos - ${especialidadNombre}` : "Nuestros Médicos";
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Nuestros Médicos</Text>
-      <FlatList
-        data={medicos}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <CardItem
-            title={item.nombre}
-            subtitle={item.especialidad}
-            description={item.descripcion}
-            onPress={() =>
-              navigation.navigate("MedicoDetailScreen", { medicoId: item.id })
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.subtitle}>
+        {especialidadNombre 
+          ? `Médicos especializados en ${especialidadNombre.toLowerCase()}`
+          : "Todos los médicos disponibles"
+        }
+      </Text>
+      
+      {!medicos || medicos.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No hay médicos disponibles</Text>
+          <Text style={styles.emptySubtext}>
+            {especialidadNombre 
+              ? `No hay médicos disponibles para ${especialidadNombre}`
+              : "No hay médicos registrados en el sistema"
             }
-          />
-        )}
-      />
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={medicos}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderMedico}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </View>
   );
 };
@@ -62,15 +135,53 @@ const MedicosScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F8FF",
+    backgroundColor: colors.background,
     padding: 16,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "bold",
-    color: "#1976D2",
-    marginBottom: 16,
+    color: colors.primary,
+    marginBottom: 8,
     textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 16,
+    color: colors.gray,
+    textAlign: "center",
+    marginBottom: 20,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: colors.text,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.gray,
+    textAlign: "center",
+  },
+  statusContainer: {
+    alignItems: "center",
+    gap: 4,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  statusText: {
+    fontSize: 12,
+    color: colors.gray,
+    fontWeight: "500",
   },
 });
 

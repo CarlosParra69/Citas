@@ -1,25 +1,32 @@
 import axiosInstance from "../utils/axiosInstance";
 
-export const getMedicos = () => {
-  return axiosInstance.get("/medicos");
+export const getMedicos = async (params = {}) => {
+  const response = await axiosInstance.get("/medicos", { params });
+  return response.data;
 };
 
-export const getMedicoById = (id) => {
-  return axiosInstance.get(`/medicos/${id}`);
+export const getMedicoById = async (id) => {
+  const response = await axiosInstance.get(`/medicos/${id}`);
+  return response.data;
 };
 
-export const getMedicoDisponibilidad = (id) => {
-  return axiosInstance.get(`/medicos/${id}/disponibilidad`);
+export const getMedicoDisponibilidad = async (id, fecha = null) => {
+  const params = fecha ? { fecha } : {};
+  const response = await axiosInstance.get(`/medicos/${id}/disponibilidad`, { params });
+  return response.data;
 };
 
-export const createMedico = (medicoData) => {
-  return axiosInstance.post("/medicos", medicoData);
+export const createMedico = async (medicoData) => {
+  const response = await axiosInstance.post("/medicos", medicoData);
+  return response.data;
 };
 
-export const updateMedico = (id, medicoData) => {
-  return axiosInstance.put(`/medicos/${id}`, medicoData);
+export const updateMedico = async (id, medicoData) => {
+  const response = await axiosInstance.put(`/medicos/${id}`, medicoData);
+  return response.data;
 };
 
-export const deleteMedico = (id) => {
-  return axiosInstance.delete(`/medicos/${id}`);
+export const deleteMedico = async (id) => {
+  const response = await axiosInstance.delete(`/medicos/${id}`);
+  return response.data;
 };
