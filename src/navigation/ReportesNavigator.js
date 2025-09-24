@@ -5,7 +5,6 @@ import MedicosMasCitasScreen from "../screens/Reportes/MedicosMasCitasScreen";
 import PatronesCitasScreen from "../screens/Reportes/PatronesCitasScreen";
 import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
 import UsuariosScreen from "../screens/UsuariosScreen";
-import ConfiguracionNotificacionesScreen from "../screens/ConfiguracionNotificacionesScreen";
 import MisEstadisticasScreen from "../screens/MisEstadisticasScreen";
 import CrearMedicoScreen from "../screens/CrearMedicoScreen";
 import GestionCitasScreen from "../screens/GestionCitasScreen";
@@ -57,11 +56,6 @@ export default function ReportesNavigator() {
         name="UsuariosScreen"
         component={UsuariosScreen}
         options={{ title: "Gestión de Usuarios" }}
-      />
-      <Stack.Screen
-        name="Configuracion"
-        component={ConfiguracionNotificacionesScreen}
-        options={{ title: "Configuración" }}
       />
       <Stack.Screen
         name="MisEstadisticasScreen"

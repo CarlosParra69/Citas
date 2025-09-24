@@ -69,11 +69,6 @@ const SuperadminDashboard = ({ dashboardData, navigation }) => {
       subtitle: "Ver estadísticas detalladas",
       onPress: () => navigation.navigate("Reportes"),
     },
-    {
-      title: "Configuración",
-      subtitle: "Ajustes del sistema",
-      onPress: () => navigation.navigate("Configuracion"),
-    },
   ];
 
   return (

@@ -9,17 +9,32 @@ import {
   Image,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useNavigation } from "@react-navigation/native";
 import useAuth from "../../hooks/useAuth";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
+import {
+  saveImageToAvatars,
+  compressImage,
+  getRelativePath,
+  deleteAvatarImage,
+  avatarExists,
+} from "../../utils/fileUtils";
+import {
+  uploadAvatar,
+  deleteAvatar as deleteAvatarAPI,
+  getAvatar,
+} from "../../api/avatar";
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
   const { user, logout, loading } = useAuth();
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const [profileImage, setProfileImage] = useState(null);
+  const [loadingAvatar, setLoadingAvatar] = useState(false);
 
   useEffect(() => {
+    loadUserAvatar();
     (async () => {
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -31,6 +46,50 @@ const ProfileScreen = () => {
       }
     })();
   }, []);
+
+  const loadUserAvatar = async () => {
+    try {
+      setLoadingAvatar(true);
+      const result = await getAvatar();
+
+      if (result.success && result.data.avatar_url) {
+        setProfileImage(result.data.avatar_url);
+      }
+    } catch (error) {
+      console.error("Error cargando avatar:", error);
+    } finally {
+      setLoadingAvatar(false);
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    Alert.alert(
+      "Eliminar Avatar",
+      "¿Estás seguro de que deseas eliminar tu foto de perfil?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const result = await deleteAvatarAPI();
+
+              if (result.success) {
+                setProfileImage(null);
+                Alert.alert("Éxito", "Avatar eliminado correctamente");
+              } else {
+                Alert.alert("Error", result.message);
+              }
+            } catch (error) {
+              console.error("Error eliminando avatar:", error);
+              Alert.alert("Error", "No se pudo eliminar el avatar");
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const pickImage = async () => {
     Alert.alert("Seleccionar imagen", "Elige una opción", [
@@ -49,16 +108,14 @@ const ProfileScreen = () => {
   const pickImageFromGallery = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled) {
-        setProfileImage(result.assets[0].uri);
-        // Aquí podrías subir la imagen al servidor
-        Alert.alert("Éxito", "Foto de perfil actualizada");
+        await processAndUploadImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error("Error picking image from gallery:", error);
@@ -84,13 +141,61 @@ const ProfileScreen = () => {
       });
 
       if (!result.canceled) {
-        setProfileImage(result.assets[0].uri);
-        // Aquí podrías subir la imagen al servidor
-        Alert.alert("Éxito", "Foto de perfil actualizada");
+        await processAndUploadImage(result.assets[0].uri);
       }
     } catch (error) {
       console.error("Error taking photo:", error);
       Alert.alert("Error", "No se pudo tomar la foto");
+    }
+  };
+
+  const processAndUploadImage = async (imageUri) => {
+    try {
+      // Mostrar indicador de carga
+      Alert.alert("Procesando", "Procesando imagen...");
+
+      // Comprimir la imagen
+      const compressedUri = await compressImage(imageUri);
+
+      // Guardar en la carpeta avatars local
+      const localAvatarPath = await saveImageToAvatars(compressedUri, user.id);
+
+      // Crear FormData para enviar al servidor usando la imagen guardada localmente
+      const formData = new FormData();
+      formData.append("avatar", {
+        uri: localAvatarPath, // Usar la imagen guardada localmente
+        type: "image/jpeg",
+        name: `avatar_${user.id}_${Date.now()}.jpg`,
+      });
+
+      // Subir al servidor
+      const uploadResult = await uploadAvatar(formData);
+
+      if (uploadResult.success) {
+        // Actualizar la imagen con la URL del servidor
+        setProfileImage(uploadResult.data.avatar_url);
+
+        Alert.alert("Éxito", "Foto de perfil actualizada correctamente", [
+          {
+            text: "OK",
+            onPress: () => {
+              // Recargar los datos del usuario para mostrar la nueva imagen
+              // Esto debería actualizarse automáticamente desde el servidor
+            },
+          },
+        ]);
+      } else {
+        // Si falla la subida al servidor, mantener la imagen local
+        setProfileImage(localAvatarPath);
+        Alert.alert(
+          "Aviso",
+          "Imagen guardada localmente. Se subirá al servidor cuando haya conexión.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      console.error("Error procesando imagen:", error);
+      Alert.alert("Error", "No se pudo procesar la imagen");
     }
   };
 
@@ -225,10 +330,24 @@ const ProfileScreen = () => {
         {/* Botones de acción */}
         <View style={styles.actionsContainer}>
           <ButtonPrimary
+            title="Configuración"
+            onPress={() => navigation.navigate("Configuracion")}
+            style={[styles.actionButton, styles.secondaryButton]}
+          />
+
+          <ButtonPrimary
             title="Editar Perfil"
             onPress={() => navigation.navigate("EditProfileScreen")}
             style={[styles.actionButton, styles.secondaryButton]}
           />
+
+          {profileImage && (
+            <ButtonPrimary
+              title="Eliminar Avatar"
+              onPress={handleDeleteAvatar}
+              style={[styles.actionButton, styles.dangerButton]}
+            />
+          )}
 
           <ButtonPrimary
             title="Cerrar Sesión"
@@ -356,6 +475,9 @@ const createStyles = (colors) =>
     },
     secondaryButton: {
       backgroundColor: colors.secondary,
+    },
+    dangerButton: {
+      backgroundColor: colors.error,
     },
     avatarTouchable: {
       position: "relative",

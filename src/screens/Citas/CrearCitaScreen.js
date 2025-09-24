@@ -10,6 +10,7 @@ import {
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import MiniCalendario from "../../components/MiniCalendario";
 import { useCitas } from "../../context/CitasContext";
 import { useAuthContext } from "../../context/AuthContext";
 import { getEspecialidades } from "../../api/especialidades";
@@ -33,6 +34,8 @@ const CrearCitaScreen = ({ navigation }) => {
     motivo_consulta: "",
     observaciones: "",
   });
+
+  const [selectedDateTime, setSelectedDateTime] = useState(null);
 
   const [errors, setErrors] = useState({});
   const [especialidades, setEspecialidades] = useState([]);
@@ -71,6 +74,16 @@ const CrearCitaScreen = ({ navigation }) => {
     }
   }, [formData.medico_id, formData.fecha_hora]);
 
+  // Reset selected date when medico changes
+  useEffect(() => {
+    if (formData.medico_id !== "") {
+      setSelectedDateTime(null);
+      setFormData((prev) => ({ ...prev, fecha_hora: "" }));
+      setAvailabilityChecked(false);
+      setIsAvailable(false);
+    }
+  }, [formData.medico_id]);
+
   const loadInitialData = async () => {
     try {
       const especialidadesResponse = await getEspecialidades();
@@ -107,14 +120,15 @@ const CrearCitaScreen = ({ navigation }) => {
     }
   };
 
-  const checkAvailability = async () => {
-    if (!formData.medico_id || !formData.fecha_hora) return;
+  const checkAvailability = async (dateTimeString = null) => {
+    const fechaHoraToCheck = dateTimeString || formData.fecha_hora;
+    if (!formData.medico_id || !fechaHoraToCheck) return;
 
     try {
       setCheckingAvailability(true);
       const availabilityResponse = await getMedicoDisponibilidad(
         formData.medico_id,
-        formData.fecha_hora
+        fechaHoraToCheck
       );
 
       if (availabilityResponse.success) {
@@ -150,7 +164,7 @@ const CrearCitaScreen = ({ navigation }) => {
     }
 
     if (!formData.fecha_hora) {
-      newErrors.fecha_hora = "Selecciona fecha y hora";
+      newErrors.fecha_hora = "Selecciona fecha y hora en el calendario";
     } else {
       const fechaCita = new Date(formData.fecha_hora);
       const ahora = new Date();
@@ -217,10 +231,14 @@ const CrearCitaScreen = ({ navigation }) => {
     }
   };
 
-  const formatDateTimeForInput = () => {
-    const now = new Date();
-    now.setHours(now.getHours() + 1); // Mínimo 1 hora en el futuro
-    return now.toISOString().slice(0, 16);
+  const handleDateSelect = (dateTime) => {
+    setSelectedDateTime(dateTime);
+    const isoString = dateTime.toISOString();
+    setFormData((prev) => ({ ...prev, fecha_hora: isoString }));
+
+    if (errors.fecha_hora) {
+      setErrors((prev) => ({ ...prev, fecha_hora: "" }));
+    }
   };
 
   if (loadingData) {
@@ -349,35 +367,22 @@ const CrearCitaScreen = ({ navigation }) => {
         </>
       )}
 
-      {/* Fecha y Hora */}
-      <InputField
-        label="Fecha y Hora *"
-        placeholder="YYYY-MM-DD HH:MM"
-        value={formData.fecha_hora}
-        onChangeText={(value) => handleChange("fecha_hora", value)}
-        error={errors.fecha_hora}
+      {/* Calendario para seleccionar fecha y hora */}
+      <Text style={styles.label}>Fecha y Hora *</Text>
+      <MiniCalendario
+        selectedDate={selectedDateTime}
+        onDateSelect={handleDateSelect}
+        medicoId={formData.medico_id}
+        onAvailabilityCheck={(dateTimeString) => {
+          if (formData.medico_id) {
+            checkAvailability(dateTimeString);
+          }
+        }}
+        isAvailable={isAvailable}
+        checkingAvailability={checkingAvailability}
       />
-      <Text style={styles.helpText}>
-        Formato: 2024-12-25 10:30 (Mínimo:{" "}
-        {formatDateTimeForInput().replace("T", " ")})
-      </Text>
-
-      {/* Indicador de disponibilidad */}
-      {availabilityChecked && (
-        <View style={styles.availabilityContainer}>
-          <Text
-            style={[
-              styles.availabilityText,
-              { color: isAvailable ? colors.success : colors.error },
-            ]}
-          >
-            {checkingAvailability
-              ? "Verificando disponibilidad..."
-              : isAvailable
-              ? "✓ Médico disponible"
-              : "✗ Médico no disponible"}
-          </Text>
-        </View>
+      {errors.fecha_hora && (
+        <Text style={styles.errorText}>{errors.fecha_hora}</Text>
       )}
 
       {/* Motivo de Consulta */}
@@ -474,14 +479,6 @@ const createStyles = (colors) =>
       color: colors.error,
       fontSize: 12,
       marginBottom: 8,
-    },
-    availabilityContainer: {
-      marginTop: 8,
-      marginBottom: 8,
-    },
-    availabilityText: {
-      fontSize: 14,
-      fontWeight: "600",
     },
     patientDetails: {
       fontSize: 12,

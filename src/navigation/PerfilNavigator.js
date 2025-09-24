@@ -7,7 +7,7 @@ import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();
 
-export default function ConfiguracionNavigator() {
+export default function PerfilNavigator() {
   const colors = useThemeColors();
 
   return (

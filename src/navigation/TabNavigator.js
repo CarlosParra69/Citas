@@ -5,7 +5,7 @@ import EspecialidadesNavigator from "./EspecialidadesNavigator";
 import MedicosNavigator from "./MedicosNavigator";
 import PacientesNavigator from "./PacientesNavigator";
 import ReportesNavigator from "./ReportesNavigator";
-import ConfiguracionNavigator from "./ConfiguracionNavigator";
+import PerfilNavigator from "./PerfilNavigator";
 import AdministracionNavigator from "./AdministracionNavigator";
 import { useThemeColors } from "../utils/themeColors";
 import { useAuthContext } from "../context/AuthContext";
@@ -35,8 +35,8 @@ export default function TabNavigator() {
             iconName = focused ? "shield" : "shield-outline";
           } else if (route.name === "Reportes") {
             iconName = focused ? "analytics" : "analytics-outline";
-          } else if (route.name === "Configuración") {
-            iconName = focused ? "settings" : "settings-outline";
+          } else if (route.name === "Perfil") {
+            iconName = focused ? "person" : "person-outline";
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -57,7 +57,7 @@ export default function TabNavigator() {
         <Tab.Screen name="Administración" component={AdministracionNavigator} />
       )}
       <Tab.Screen name="Reportes" component={ReportesNavigator} />
-      <Tab.Screen name="Configuración" component={ConfiguracionNavigator} />
+      <Tab.Screen name="Perfil" component={PerfilNavigator} />
     </Tab.Navigator>
   );
 }
