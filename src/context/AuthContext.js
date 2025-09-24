@@ -29,22 +29,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, cedula) => {
+  const login = async (email, password) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await authApi.login({ email, cedula });
-      
+
+      const response = await authApi.login({ email, password });
+
       if (response.success && response.data.access_token) {
         await AsyncStorage.setItem("token", response.data.access_token);
-        setUser(response.data.paciente);
+        setUser(response.data.user);
         return response;
       } else {
         throw new Error(response.message || "Error en el login");
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Error de conexión";
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -56,9 +57,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await authApi.register(userData);
-      
+
       if (response.success && response.data.access_token) {
         // Auto-login después del registro exitoso
         await AsyncStorage.setItem("token", response.data.access_token);
@@ -68,7 +69,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || "Error en el registro");
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Error de conexión";
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

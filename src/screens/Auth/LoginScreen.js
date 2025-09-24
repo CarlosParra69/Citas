@@ -4,13 +4,15 @@ import useAuth from "../../hooks/useAuth";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import globalStyles from "../../styles/globalStyles";
-import colors from "../../utils/colors";
+import { useThemeColors } from "../../utils/themeColors";
 
 const LoginScreen = ({ navigation }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState("");
-  const [cedula, setCedula] = useState("");
+  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [cedulaError, setCedulaError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const { login, loading, error, clearError } = useAuth();
 
   useEffect(() => {
@@ -25,7 +27,7 @@ const LoginScreen = ({ navigation }) => {
 
     // Limpiar errores previos
     setEmailError("");
-    setCedulaError("");
+    setPasswordError("");
 
     // Validar email
     if (!email.trim()) {
@@ -36,12 +38,9 @@ const LoginScreen = ({ navigation }) => {
       isValid = false;
     }
 
-    // Validar cédula
-    if (!cedula.trim()) {
-      setCedulaError("La contraseña es requerida");
-      isValid = false;
-    } else if (cedula.trim().length < 6) {
-      setCedulaError("La cédula debe tener al menos 6 caracteres");
+    // Validar contraseña
+    if (!password.trim()) {
+      setPasswordError("La contraseña es requerida");
       isValid = false;
     }
 
@@ -52,7 +51,7 @@ const LoginScreen = ({ navigation }) => {
     if (!validateForm()) return;
 
     try {
-      await login(email.trim(), cedula.trim());
+      await login(email.trim(), password.trim());
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
     }
@@ -74,12 +73,12 @@ const LoginScreen = ({ navigation }) => {
 
       <InputField
         placeholder="Contraseña"
-        value={cedula}
-        onChangeText={setCedula}
-        keyboardType="password"
+        value={password}
+        onChangeText={setPassword}
+        keyboardType="default"
         secureTextEntry
         autoCapitalize="none"
-        error={cedulaError}
+        error={passwordError}
       />
 
       <ButtonPrimary
@@ -87,49 +86,41 @@ const LoginScreen = ({ navigation }) => {
         onPress={handleLogin}
         disabled={loading}
       />
-
-      <TouchableOpacity
-        style={styles.registerLink}
-        onPress={() => navigation.navigate("Register")}
-      >
-        <Text style={styles.registerText}>
-          ¿No tienes cuenta? Regístrate aquí
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: "center",
-    backgroundColor: colors.background,
-  },
-  hospitalTitle: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: colors.primary,
-    textAlign: "center",
-    marginBottom: 8,
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: colors.text,
-    textAlign: "center",
-    marginBottom: 32,
-  },
-  registerLink: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  registerText: {
-    color: colors.primary,
-    fontSize: 16,
-    textDecorationLine: "underline",
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      padding: 20,
+      justifyContent: "center",
+      backgroundColor: colors.background,
+    },
+    hospitalTitle: {
+      fontSize: 32,
+      fontWeight: "bold",
+      color: colors.primary,
+      textAlign: "center",
+      marginBottom: 8,
+      letterSpacing: 1,
+    },
+    subtitle: {
+      fontSize: 18,
+      color: colors.text,
+      textAlign: "center",
+      marginBottom: 32,
+    },
+    registerLink: {
+      marginTop: 20,
+      alignItems: "center",
+    },
+    registerText: {
+      color: colors.primary,
+      fontSize: 16,
+      textDecorationLine: "underline",
+    },
+  });
 
 export default LoginScreen;

@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from "react";
-import { 
-  View, 
-  FlatList, 
-  StyleSheet, 
-  Text, 
-  RefreshControl, 
-  Alert 
+import {
+  View,
+  FlatList,
+  StyleSheet,
+  Text,
+  RefreshControl,
+  Alert,
 } from "react-native";
 import { getMedicos } from "../../api/medicos";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import CardItem from "../../components/CardItem";
-import colors from "../../utils/colors";
+import { useThemeColors } from "../../utils/themeColors";
 
 const MedicosScreen = ({ route, navigation }) => {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
   const { especialidadId, especialidadNombre } = route.params || {};
-  
+
   const [medicos, setMedicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,7 +38,7 @@ const MedicosScreen = ({ route, navigation }) => {
       setError(null);
       const params = especialidadId ? { especialidad_id: especialidadId } : {};
       const response = await getMedicos(params);
-      
+
       if (response.success) {
         const medicosData = response.data || [];
         setMedicos(medicosData);
@@ -44,7 +46,8 @@ const MedicosScreen = ({ route, navigation }) => {
         throw new Error(response.message || "Error al cargar médicos");
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.message || err.message || "Error de conexión";
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       console.error("Error loading medicos:", err);
     } finally {
@@ -59,17 +62,22 @@ const MedicosScreen = ({ route, navigation }) => {
   };
 
   const handleMedicoPress = (medico) => {
-    navigation.navigate("MedicoDetailScreen", { 
+    navigation.navigate("MedicoDetailScreen", {
       medicoId: medico.id,
-      medicoNombre: medico.nombre_completo || `${medico.nombre} ${medico.apellido}`
+      medicoNombre:
+        medico.nombre_completo || `${medico.nombre} ${medico.apellido}`,
     });
   };
 
   const renderMedico = ({ item }) => {
-    const nombreCompleto = item.nombre_completo || `${item.nombre} ${item.apellido}`;
-    const especialidadNombre = item.especialidad?.nombre || "Especialidad no especificada";
-    const registroMedico = item.registro_medico ? `Reg: ${item.registro_medico}` : "";
-    
+    const nombreCompleto =
+      item.nombre_completo || `${item.nombre} ${item.apellido}`;
+    const especialidadNombre =
+      item.especialidad?.nombre || "Especialidad no especificada";
+    const registroMedico = item.registro_medico
+      ? `Reg: ${item.registro_medico}`
+      : "";
+
     return (
       <CardItem
         title={nombreCompleto}
@@ -78,12 +86,14 @@ const MedicosScreen = ({ route, navigation }) => {
         onPress={() => handleMedicoPress(item)}
         rightContent={
           <View style={styles.statusContainer}>
-            <View style={[
-              styles.statusDot, 
-              { backgroundColor: item.activo ? colors.success : colors.gray }
-            ]} />
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: item.activo ? colors.success : colors.gray },
+              ]}
+            />
             <Text style={styles.statusText}>
-              {item.activo ? 'Activo' : 'Inactivo'}
+              {item.activo ? "Activo" : "Inactivo"}
             </Text>
           </View>
         }
@@ -95,26 +105,26 @@ const MedicosScreen = ({ route, navigation }) => {
     return <LoadingSpinner message="Cargando médicos..." />;
   }
 
-  const title = especialidadNombre ? `Médicos - ${especialidadNombre}` : "Nuestros Médicos";
+  const title = especialidadNombre
+    ? `Médicos - ${especialidadNombre}`
+    : "Nuestros Médicos";
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>
-        {especialidadNombre 
+        {especialidadNombre
           ? `Médicos especializados en ${especialidadNombre.toLowerCase()}`
-          : "Todos los médicos disponibles"
-        }
+          : "Todos los médicos disponibles"}
       </Text>
-      
+
       {!medicos || medicos.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No hay médicos disponibles</Text>
           <Text style={styles.emptySubtext}>
-            {especialidadNombre 
+            {especialidadNombre
               ? `No hay médicos disponibles para ${especialidadNombre}`
-              : "No hay médicos registrados en el sistema"
-            }
+              : "No hay médicos registrados en el sistema"}
           </Text>
         </View>
       ) : (
@@ -132,57 +142,59 @@ const MedicosScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    padding: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: colors.primary,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.gray,
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: colors.text,
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: colors.gray,
-    textAlign: "center",
-  },
-  statusContainer: {
-    alignItems: "center",
-    gap: 4,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  statusText: {
-    fontSize: 12,
-    color: colors.gray,
-    fontWeight: "500",
-  },
-});
+// Create styles function that uses theme colors
+const createStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+      padding: 16,
+    },
+    title: {
+      fontSize: 24,
+      fontWeight: "bold",
+      color: colors.primary,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    subtitle: {
+      fontSize: 16,
+      color: colors.gray,
+      textAlign: "center",
+      marginBottom: 20,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 32,
+    },
+    emptyText: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      textAlign: "center",
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 14,
+      color: colors.gray,
+      textAlign: "center",
+    },
+    statusContainer: {
+      alignItems: "center",
+      gap: 4,
+    },
+    statusDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    statusText: {
+      fontSize: 12,
+      color: colors.gray,
+      fontWeight: "500",
+    },
+  });
 
 export default MedicosScreen;

@@ -257,10 +257,19 @@ La aplicación está diseñada para conectar con el backend Laravel. Asegúrate 
 
 ### **Datos de Prueba**
 
-- Usuario: `test2@example.com` / `password123`
-- Especialidades precargadas
-- Médicos de ejemplo
-- Citas de prueba
+**Superadmin:**
+- Email: `admin@citasmedicas.com`
+- Contraseña: `admin123`
+
+**Médico:**
+- Email: `medico@citasmedicas.com`
+- Contraseña: `medico123`
+
+**Paciente:**
+- Email: `paciente@citasmedicas.com`
+- Contraseña: `paciente123`
+
+**Nota:** Para el login, usa email y contraseña. El sistema usa la tabla `users` para autenticación y `pacientes` para información médica.
 
 ### **Debugging**
 

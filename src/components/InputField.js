@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, TextInput, Text, StyleSheet } from 'react-native';
-import colors from '../utils/colors';
+import React from "react";
+import { View, TextInput, Text, StyleSheet } from "react-native";
+import { useThemeColors } from "../utils/themeColors";
 
 const InputField = ({ label, error, ...props }) => {
+  const colors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -16,31 +19,32 @@ const InputField = ({ label, error, ...props }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 15,
-  },
-  label: {
-    marginBottom: 5,
-    fontSize: 14,
-    color: colors.text,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: colors.text,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 12,
-    marginTop: 5,
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: 15,
+    },
+    label: {
+      marginBottom: 5,
+      fontSize: 14,
+      color: colors.text,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      color: colors.text,
+    },
+    inputError: {
+      borderColor: colors.error,
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 12,
+      marginTop: 5,
+    },
+  });
 
 export default InputField;

@@ -1,11 +1,12 @@
-import { createStackNavigator } from '@react-navigation/stack';
-import LoginScreen from '../screens/Auth/LoginScreen';
-import RegisterScreen from '../screens/Auth/RegisterScreen';
-import colors from '../utils/colors';
+import { createStackNavigator } from "@react-navigation/stack";
+import LoginScreen from "../screens/Auth/LoginScreen";
+import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();
 
 export default function AuthNavigator() {
+  const colors = useThemeColors();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -14,19 +15,14 @@ export default function AuthNavigator() {
         },
         headerTintColor: colors.white,
         headerTitleStyle: {
-          fontWeight: 'bold',
+          fontWeight: "bold",
         },
       }}
     >
-      <Stack.Screen 
-        name="Login" 
-        component={LoginScreen} 
-        options={{ title: 'Iniciar Sesión' }}
-      />
-      <Stack.Screen 
-        name="Register" 
-        component={RegisterScreen} 
-        options={{ title: 'Registro' }}
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ title: "Iniciar Sesión" }}
       />
     </Stack.Navigator>
   );

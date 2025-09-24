@@ -64,7 +64,11 @@ export const PacientesProvider = ({ children }) => {
     try {
       setLoading(true);
       await deletePaciente(id);
-      setPacientes(pacientes.filter((paciente) => paciente.id !== id));
+      setPacientes(
+        (Array.isArray(pacientes) ? pacientes : []).filter(
+          (paciente) => paciente.id !== id
+        )
+      );
       setError(null);
     } catch (err) {
       setError(err.message);

@@ -5,18 +5,27 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { AuthProvider } from "./src/context/AuthContext";
 import { CitasProvider } from "./src/context/CitasContext";
 import { PacientesProvider } from "./src/context/PacientesContext";
+import { ThemeProvider } from "./src/context/ThemeContext";
+import { UsuariosProvider } from "./src/context/UsuariosContext";
+import { EstadisticasProvider } from "./src/context/EstadisticasContext";
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CitasProvider>
-        <PacientesProvider>
-          <NavigationContainer>
-            <AppNavigator />
-            <StatusBar style="auto" />
-          </NavigationContainer>
-        </PacientesProvider>
-      </CitasProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <CitasProvider>
+          <PacientesProvider>
+            <UsuariosProvider>
+              <EstadisticasProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                  <StatusBar style="auto" />
+                </NavigationContainer>
+              </EstadisticasProvider>
+            </UsuariosProvider>
+          </PacientesProvider>
+        </CitasProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
