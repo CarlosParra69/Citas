@@ -9,17 +9,104 @@ import {
 } from "react-native";
 import { useAuthContext } from "../context/AuthContext";
 import { getEspecialidades } from "../api/especialidades";
-import { createMedico } from "../api/medicos";
+import { createMedico, updateMedico } from "../api/medicos";
 import InputField from "../components/InputField";
 import ButtonPrimary from "../components/ButtonPrimary";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useThemeColors } from "../utils/themeColors";
 import { useGlobalStyles } from "../styles/globalStyles";
 
-const CrearMedicoScreen = ({ navigation }) => {
+// Componente para seleccionar horarios
+const HorariosSelector = ({ horarios, onHorariosChange, error }) => {
+  const colors = useThemeColors();
+
+  const diasSemana = [
+    { key: "lunes", label: "Lunes" },
+    { key: "martes", label: "Martes" },
+    { key: "miercoles", label: "Miércoles" },
+    { key: "jueves", label: "Jueves" },
+    { key: "viernes", label: "Viernes" },
+    { key: "sabado", label: "Sábado" },
+    { key: "domingo", label: "Domingo" },
+  ];
+
+  const handleHorarioChange = (dia, horarioIndex, field, value) => {
+    const nuevosHorarios = { ...horarios };
+    if (!nuevosHorarios[dia]) nuevosHorarios[dia] = [];
+
+    if (field === "delete") {
+      nuevosHorarios[dia] = nuevosHorarios[dia].filter(
+        (_, i) => i !== horarioIndex
+      );
+    } else {
+      if (!nuevosHorarios[dia][horarioIndex]) {
+        nuevosHorarios[dia][horarioIndex] = { inicio: "", fin: "" };
+      }
+      nuevosHorarios[dia][horarioIndex][field] = value;
+    }
+
+    onHorariosChange(dia, nuevosHorarios[dia]);
+  };
+
+  const addHorario = (dia) => {
+    const nuevosHorarios = { ...horarios };
+    if (!nuevosHorarios[dia]) nuevosHorarios[dia] = [];
+    nuevosHorarios[dia].push({ inicio: "08:00", fin: "12:00" });
+    onHorariosChange(dia, nuevosHorarios[dia]);
+  };
+
+  return (
+    <View>
+      {diasSemana.map((dia) => (
+        <View key={dia.key} style={styles.diaContainer}>
+          <Text style={styles.diaLabel}>{dia.label}</Text>
+          {horarios[dia.key]?.map((horario, index) => (
+            <View key={index} style={styles.horarioRow}>
+              <InputField
+                label="Inicio"
+                placeholder="HH:MM"
+                value={horario.inicio || ""}
+                onChangeText={(value) =>
+                  handleHorarioChange(dia.key, index, "inicio", value)
+                }
+                style={styles.horarioInput}
+              />
+              <InputField
+                label="Fin"
+                placeholder="HH:MM"
+                value={horario.fin || ""}
+                onChangeText={(value) =>
+                  handleHorarioChange(dia.key, index, "fin", value)
+                }
+                style={styles.horarioInput}
+              />
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleHorarioChange(dia.key, index, "delete")}
+              >
+                <Text style={styles.deleteButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => addHorario(dia.key)}
+          >
+            <Text style={styles.addButtonText}>+ Agregar horario</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      {error && <Text style={styles.errorText}>{error}</Text>}
+    </View>
+  );
+};
+
+const CrearMedicoScreen = ({ navigation, route }) => {
   const colors = useThemeColors();
   const globalStyles = useGlobalStyles();
   const { user } = useAuthContext();
+  const { medico } = route.params || {};
+  const isEditing = !!medico;
   const styles = createStyles(colors);
 
   const [formData, setFormData] = useState({
@@ -28,9 +115,18 @@ const CrearMedicoScreen = ({ navigation }) => {
     cedula: "",
     email: "",
     telefono: "",
-    especialidades: [],
-    numero_licencia: "",
-    anos_experiencia: "",
+    especialidad_id: "",
+    registro_medico: "",
+    horarios_atencion: {
+      lunes: [],
+      martes: [],
+      miercoles: [],
+      jueves: [],
+      viernes: [],
+      sabado: [],
+      domingo: [],
+    },
+    activo: true,
   });
 
   const [errors, setErrors] = useState({});
@@ -53,7 +149,34 @@ const CrearMedicoScreen = ({ navigation }) => {
       return;
     }
     loadEspecialidades();
-  }, [user]);
+    if (isEditing) {
+      loadMedicoData();
+    }
+  }, [user, isEditing]);
+
+  const loadMedicoData = () => {
+    if (medico) {
+      setFormData({
+        nombre: medico.nombre || "",
+        apellido: medico.apellido || "",
+        cedula: medico.cedula || "",
+        email: medico.email || "",
+        telefono: medico.telefono || "",
+        especialidad_id: medico.especialidad_id || "",
+        registro_medico: medico.registro_medico || "",
+        horarios_atencion: medico.horarios_atencion || {
+          lunes: [],
+          martes: [],
+          miercoles: [],
+          jueves: [],
+          viernes: [],
+          sabado: [],
+          domingo: [],
+        },
+        activo: medico.activo !== undefined ? medico.activo : true,
+      });
+    }
+  };
 
   const loadEspecialidades = async () => {
     try {
@@ -105,45 +228,39 @@ const CrearMedicoScreen = ({ navigation }) => {
       newErrors.telefono = "El teléfono debe tener al menos 7 dígitos";
     }
 
-    if (formData.especialidades.length === 0) {
-      newErrors.especialidades = "Debe seleccionar al menos una especialidad";
+    if (!formData.especialidad_id) {
+      newErrors.especialidad_id = "Debe seleccionar una especialidad";
     }
 
-    if (!formData.numero_licencia.trim()) {
-      newErrors.numero_licencia = "El número de licencia es requerido";
+    if (!formData.registro_medico.trim()) {
+      newErrors.registro_medico = "El registro médico es requerido";
     }
 
-    if (!formData.anos_experiencia.trim()) {
-      newErrors.anos_experiencia = "Los años de experiencia son requeridos";
-    } else {
-      const anos = parseInt(formData.anos_experiencia);
-      if (isNaN(anos) || anos < 0 || anos > 50) {
-        newErrors.anos_experiencia = "Ingrese un número válido de años (0-50)";
-      }
+    if (!formData.horarios_atencion) {
+      newErrors.horarios_atencion = "Los horarios de atención son requeridos";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleEspecialidadToggle = (especialidadId) => {
-    setFormData((prev) => ({
-      ...prev,
-      especialidades: prev.especialidades.includes(especialidadId)
-        ? prev.especialidades.filter((id) => id !== especialidadId)
-        : [...prev.especialidades, especialidadId],
-    }));
-
-    // Limpiar error de especialidades si existe
-    if (errors.especialidades) {
-      setErrors((prev) => ({ ...prev, especialidades: "" }));
-    }
-  };
-
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  const handleHorariosChange = (dia, horarios) => {
+    setFormData((prev) => ({
+      ...prev,
+      horarios_atencion: {
+        ...prev.horarios_atencion,
+        [dia]: horarios,
+      },
+    }));
+    if (errors.horarios_atencion) {
+      setErrors((prev) => ({ ...prev, horarios_atencion: "" }));
     }
   };
 
@@ -159,17 +276,24 @@ const CrearMedicoScreen = ({ navigation }) => {
         cedula: formData.cedula.trim(),
         email: formData.email.trim(),
         telefono: formData.telefono.trim(),
-        especialidades: formData.especialidades,
-        numero_licencia: formData.numero_licencia.trim(),
-        anos_experiencia: parseInt(formData.anos_experiencia),
+        especialidad_id: formData.especialidad_id,
+        registro_medico: formData.registro_medico.trim(),
+        horarios_atencion: formData.horarios_atencion,
+        activo: formData.activo,
       };
 
-      const response = await createMedico(medicoData);
+      let response;
+      if (isEditing) {
+        response = await updateMedico(medico.id, medicoData);
+      } else {
+        response = await createMedico(medicoData);
+      }
 
       if (response.success) {
+        const action = isEditing ? "actualizado" : "creado";
         Alert.alert(
-          "Médico Creado",
-          "El médico ha sido creado exitosamente. Se han enviado las credenciales de acceso por email.",
+          `Médico ${action}`,
+          `El médico ha sido ${action} exitosamente.`,
           [
             {
               text: "OK",
@@ -178,13 +302,22 @@ const CrearMedicoScreen = ({ navigation }) => {
           ]
         );
       } else {
-        Alert.alert("Error", response.message || "No se pudo crear el médico");
+        Alert.alert(
+          "Error",
+          response.message ||
+            `No se pudo ${isEditing ? "actualizar" : "crear"} el médico`
+        );
       }
     } catch (error) {
-      console.error("Error creating medico:", error);
+      console.error(
+        `Error ${isEditing ? "updating" : "creating"} medico:`,
+        error
+      );
       Alert.alert(
         "Error",
-        "No se pudo crear el médico. Verifique los datos e intente nuevamente."
+        `No se pudo ${
+          isEditing ? "actualizar" : "crear"
+        } el médico. Verifique los datos e intente nuevamente.`
       );
     } finally {
       setLoading(false);
@@ -200,7 +333,9 @@ const CrearMedicoScreen = ({ navigation }) => {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      <Text style={styles.title}>Crear Nuevo Médico</Text>
+      <Text style={styles.title}>
+        {isEditing ? "Editar Médico" : "Crear Nuevo Médico"}
+      </Text>
 
       {/* Información Personal */}
       <View style={styles.section}>
@@ -255,22 +390,22 @@ const CrearMedicoScreen = ({ navigation }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Profesional</Text>
 
-        <Text style={styles.label}>Especialidades *</Text>
+        <Text style={styles.label}>Especialidad *</Text>
         <View style={styles.especialidadesContainer}>
           {especialidades.map((especialidad) => (
             <TouchableOpacity
               key={especialidad.id}
               style={[
                 styles.especialidadChip,
-                formData.especialidades.includes(especialidad.id) &&
+                formData.especialidad_id === especialidad.id &&
                   styles.selectedEspecialidadChip,
               ]}
-              onPress={() => handleEspecialidadToggle(especialidad.id)}
+              onPress={() => handleChange("especialidad_id", especialidad.id)}
             >
               <Text
                 style={[
                   styles.especialidadChipText,
-                  formData.especialidades.includes(especialidad.id) &&
+                  formData.especialidad_id === especialidad.id &&
                     styles.selectedEspecialidadChipText,
                 ]}
               >
@@ -279,30 +414,46 @@ const CrearMedicoScreen = ({ navigation }) => {
             </TouchableOpacity>
           ))}
         </View>
-        {errors.especialidades && (
-          <Text style={styles.errorText}>{errors.especialidades}</Text>
+        {errors.especialidad_id && (
+          <Text style={styles.errorText}>{errors.especialidad_id}</Text>
         )}
 
         <InputField
-          label="Número de Licencia *"
-          placeholder="Ingrese el número de licencia médica"
-          value={formData.numero_licencia}
-          onChangeText={(value) => handleChange("numero_licencia", value)}
-          error={errors.numero_licencia}
+          label="Registro Médico *"
+          placeholder="Ingrese el registro médico"
+          value={formData.registro_medico}
+          onChangeText={(value) => handleChange("registro_medico", value)}
+          error={errors.registro_medico}
         />
 
-        <InputField
-          label="Años de Experiencia *"
-          placeholder="Ingrese los años de experiencia"
-          value={formData.anos_experiencia}
-          onChangeText={(value) => handleChange("anos_experiencia", value)}
-          keyboardType="numeric"
-          error={errors.anos_experiencia}
+        <View style={styles.switchContainer}>
+          <Text style={styles.label}>Estado</Text>
+          <TouchableOpacity
+            style={[
+              styles.switch,
+              formData.activo ? styles.switchActive : styles.switchInactive,
+            ]}
+            onPress={() => handleChange("activo", !formData.activo)}
+          >
+            <Text style={styles.switchText}>
+              {formData.activo ? "Activo" : "Inactivo"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Horarios de Atención */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Horarios de Atención</Text>
+        <HorariosSelector
+          horarios={formData.horarios_atencion}
+          onHorariosChange={handleHorariosChange}
+          error={errors.horarios_atencion}
         />
       </View>
 
       <ButtonPrimary
-        title="Crear Médico"
+        title={isEditing ? "Actualizar Médico" : "Crear Médico"}
         onPress={handleSubmit}
         disabled={loading}
         loading={loading}
@@ -390,6 +541,77 @@ const createStyles = (colors) =>
     submitButton: {
       marginTop: 8,
       marginBottom: 20,
+    },
+    switchContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 12,
+    },
+    switch: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    switchActive: {
+      backgroundColor: colors.success,
+      borderColor: colors.success,
+    },
+    switchInactive: {
+      backgroundColor: colors.lightGray,
+      borderColor: colors.lightGray,
+    },
+    switchText: {
+      color: colors.white,
+      fontWeight: "600",
+    },
+    diaContainer: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+    },
+    diaLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    horarioRow: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      marginBottom: 8,
+      gap: 8,
+    },
+    horarioInput: {
+      flex: 1,
+    },
+    deleteButton: {
+      backgroundColor: colors.error,
+      width: 40,
+      height: 40,
+      borderRadius: 8,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    deleteButtonText: {
+      color: colors.white,
+      fontSize: 20,
+      fontWeight: "bold",
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      alignSelf: "flex-start",
+    },
+    addButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: "600",
     },
   });
 

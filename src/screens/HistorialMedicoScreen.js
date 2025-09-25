@@ -258,7 +258,9 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
                   >
                     {estado === "todos"
                       ? "Todos"
-                      : estado.charAt(0).toUpperCase() + estado.slice(1)}
+                      : estado
+                      ? estado.charAt(0).toUpperCase() + estado.slice(1)
+                      : "Sin estado"}
                   </Text>
                 </TouchableOpacity>
               )

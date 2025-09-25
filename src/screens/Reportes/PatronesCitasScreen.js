@@ -7,21 +7,39 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { useAuthContext } from "../../context/AuthContext";
 import { getPatronesCitas } from "../../api/reportes";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 
 const PatronesCitasScreen = ({ navigation }) => {
   const colors = useThemeColors();
+  const { user } = useAuthContext();
   const styles = createStyles(colors);
   const [patronesData, setPatronesData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadPatronesData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.rol === "superadmin") {
+        loadPatronesData();
+      } else {
+        Alert.alert(
+          "Acceso Denegado",
+          "No tienes permisos para acceder a esta pantalla",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      }
+    }, [user])
+  );
 
   useEffect(() => {
     if (error) {

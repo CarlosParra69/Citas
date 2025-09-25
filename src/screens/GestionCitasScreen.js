@@ -173,7 +173,9 @@ const GestionCitasScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.estadoText}>
-              {item.estado.charAt(0).toUpperCase() + item.estado.slice(1)}
+              {item.estado
+                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
+                : "Sin estado"}
             </Text>
           </View>
         </View>
@@ -256,8 +258,10 @@ const GestionCitasScreen = ({ navigation }) => {
               >
                 {estado === "todos"
                   ? "Todas"
-                  : estado.charAt(0).toUpperCase() +
-                    estado.slice(1).replace("_", " ")}
+                  : estado
+                  ? estado.charAt(0).toUpperCase() +
+                    estado.slice(1).replace("_", " ")
+                  : "Sin estado"}
               </Text>
             </TouchableOpacity>
           ))}

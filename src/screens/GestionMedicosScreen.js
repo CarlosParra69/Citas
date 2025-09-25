@@ -202,7 +202,9 @@ const GestionMedicosScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.estadoText}>
-              {item.estado.charAt(0).toUpperCase() + item.estado.slice(1)}
+              {item.estado
+                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
+                : "Sin estado"}
             </Text>
           </View>
         </View>
@@ -221,7 +223,10 @@ const GestionMedicosScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() =>
-            navigation.navigate("CrearMedicoScreen", { medico: item })
+            navigation.navigate("MedicosNavigator", {
+              screen: "CrearMedicoScreen",
+              params: { medico: item },
+            })
           }
         >
           <Text style={styles.editButtonText}>Editar</Text>
@@ -300,7 +305,9 @@ const GestionMedicosScreen = ({ navigation }) => {
               >
                 {estado === "todos"
                   ? "Todos"
-                  : estado.charAt(0).toUpperCase() + estado.slice(1)}
+                  : estado
+                  ? estado.charAt(0).toUpperCase() + estado.slice(1)
+                  : "Sin estado"}
               </Text>
             </TouchableOpacity>
           ))}

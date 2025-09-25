@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { createUsuario } from "../api/usuarios";
 import InputField from "../components/InputField";
 import ButtonPrimary from "../components/ButtonPrimary";
@@ -34,6 +35,23 @@ const CrearUsuarioScreen = ({ navigation }) => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!user || (user.rol !== "superadmin" && user.rol !== "medico")) {
+        Alert.alert(
+          "Acceso Denegado",
+          "No tienes permisos para crear usuarios",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      }
+    }, [user])
+  );
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({

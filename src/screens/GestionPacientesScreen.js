@@ -216,7 +216,9 @@ const GestionPacientesScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.estadoText}>
-              {item.estado.charAt(0).toUpperCase() + item.estado.slice(1)}
+              {item.estado
+                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
+                : "Sin estado"}
             </Text>
           </View>
         </View>
@@ -314,7 +316,9 @@ const GestionPacientesScreen = ({ navigation }) => {
               >
                 {estado === "todos"
                   ? "Todos"
-                  : estado.charAt(0).toUpperCase() + estado.slice(1)}
+                  : estado
+                  ? estado.charAt(0).toUpperCase() + estado.slice(1)
+                  : "Sin estado"}
               </Text>
             </TouchableOpacity>
           ))}

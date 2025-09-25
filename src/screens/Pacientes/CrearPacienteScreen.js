@@ -24,6 +24,8 @@ const CrearPacienteScreen = ({ navigation }) => {
     antecedentes_medicos: "",
     contacto_emergencia: "",
     telefono_emergencia: "",
+    password: "",
+    password_confirmation: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -78,6 +80,19 @@ const CrearPacienteScreen = ({ navigation }) => {
       newErrors.fecha_nacimiento = "La fecha debe tener el formato YYYY-MM-DD";
     }
 
+    if (!formData.password) {
+      newErrors.password = "La contraseña es requerida";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+    }
+
+    if (!formData.password_confirmation) {
+      newErrors.password_confirmation =
+        "La confirmación de contraseña es requerida";
+    } else if (formData.password !== formData.password_confirmation) {
+      newErrors.password_confirmation = "Las contraseñas no coinciden";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -97,12 +112,16 @@ const CrearPacienteScreen = ({ navigation }) => {
       const response = await createPaciente(dataToSend);
 
       if (response.data.success) {
-        Alert.alert("Éxito", "Paciente creado exitosamente", [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack(),
-          },
-        ]);
+        Alert.alert(
+          "Éxito",
+          "Paciente y usuario creados exitosamente. Se han enviado las credenciales de acceso por email.",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
       } else {
         throw new Error(response.data.message || "Error al crear paciente");
       }
@@ -195,6 +214,31 @@ const CrearPacienteScreen = ({ navigation }) => {
             placeholder="Ingresa la dirección"
             multiline
             numberOfLines={2}
+          />
+        </View>
+
+        {/* Credenciales de acceso */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Credenciales de Acceso</Text>
+
+          <InputField
+            label="Contraseña *"
+            value={formData.password}
+            onChangeText={(value) => handleInputChange("password", value)}
+            error={errors.password}
+            placeholder="Ingresa una contraseña"
+            secureTextEntry
+          />
+
+          <InputField
+            label="Confirmar Contraseña *"
+            value={formData.password_confirmation}
+            onChangeText={(value) =>
+              handleInputChange("password_confirmation", value)
+            }
+            error={errors.password_confirmation}
+            placeholder="Confirma la contraseña"
+            secureTextEntry
           />
         </View>
 

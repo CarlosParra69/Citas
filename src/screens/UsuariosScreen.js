@@ -165,7 +165,9 @@ const UsuariosScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.roleBadgeText}>
-              {item.rol.charAt(0).toUpperCase() + item.rol.slice(1)}
+              {item.rol
+                ? item.rol.charAt(0).toUpperCase() + item.rol.slice(1)
+                : "Sin rol"}
             </Text>
           </View>
 
@@ -176,7 +178,9 @@ const UsuariosScreen = ({ navigation }) => {
             ]}
           >
             <Text style={styles.estadoBadgeText}>
-              {item.estado.charAt(0).toUpperCase() + item.estado.slice(1)}
+              {item.estado
+                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
+                : "Sin estado"}
             </Text>
           </View>
         </View>
@@ -249,7 +253,9 @@ const UsuariosScreen = ({ navigation }) => {
               >
                 {role === "todos"
                   ? "Todos"
-                  : role.charAt(0).toUpperCase() + role.slice(1)}
+                  : role
+                  ? role.charAt(0).toUpperCase() + role.slice(1)
+                  : "Sin rol"}
               </Text>
             </TouchableOpacity>
           ))}

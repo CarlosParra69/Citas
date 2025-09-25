@@ -7,6 +7,8 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { useAuthContext } from "../../context/AuthContext";
 import { getMedicosMasCitas } from "../../api/reportes";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import CardItem from "../../components/CardItem";
@@ -15,15 +17,31 @@ import { useThemeColors } from "../../utils/themeColors";
 
 const MedicosMasCitasScreen = ({ navigation }) => {
   const colors = useThemeColors();
+  const { user } = useAuthContext();
   const styles = createStyles(colors);
   const [medicosData, setMedicosData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    loadMedicosData();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (user?.rol === "superadmin") {
+        loadMedicosData();
+      } else {
+        Alert.alert(
+          "Acceso Denegado",
+          "No tienes permisos para acceder a esta pantalla",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack(),
+            },
+          ]
+        );
+      }
+    }, [user])
+  );
 
   useEffect(() => {
     if (error) {

@@ -246,7 +246,9 @@ const ProfileScreen = ({ navigation }) => {
                   style={[styles.avatar, { backgroundColor: colors.primary }]}
                 >
                   <Text style={[styles.avatarText, { color: colors.white }]}>
-                    {nombreCompleto.charAt(0).toUpperCase()}
+                    {nombreCompleto
+                      ? nombreCompleto.charAt(0).toUpperCase()
+                      : "?"}
                   </Text>
                 </View>
               )}
