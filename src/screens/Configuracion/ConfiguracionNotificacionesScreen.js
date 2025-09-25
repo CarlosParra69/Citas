@@ -10,15 +10,15 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
-import { useTheme } from "../context/ThemeContext";
+import { useAuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 import {
   getConfiguracionNotificaciones,
   updateConfiguracionNotificaciones,
-} from "../api/notificaciones";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+} from "../../api/notificaciones";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 const ConfiguracionNotificacionesScreen = ({ navigation }) => {
   const { user } = useAuthContext();

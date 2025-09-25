@@ -1,4 +1,4 @@
-# 🏥 Sistema de Gestión de Citas Médicas - Frontend
+# 🏥 MediApp - Frontend
 
 Aplicación móvil desarrollada con **React Native** y **Expo** para la gestión
 completa de un sistema de citas médicas. Conecta con el backend Laravel para

@@ -9,11 +9,11 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
-import { getMedicos, updateMedico, deleteMedico } from "../api/medicos";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+import { useAuthContext } from "../../context/AuthContext";
+import { getMedicos, updateMedico, deleteMedico } from "../../api/medicos";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 const GestionMedicosScreen = ({ navigation }) => {
   const { user } = useAuthContext();

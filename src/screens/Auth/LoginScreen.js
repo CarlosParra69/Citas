@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
+import {
+  View,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Alert,
+  Image,
+} from "react-native";
 import useAuth from "../../hooks/useAuth";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -59,7 +66,12 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.hospitalTitle}>Nueva EPS</Text>
+      <Image
+        source={require("../../assets/svg/MediApp_logo.png")}
+        style={styles.logo}
+        resizeMode="contain"
+      />
+      <Text style={styles.hospitalTitle}>MediApp</Text>
       <Text style={styles.subtitle}>Gestión de Citas Médicas</Text>
 
       <InputField
@@ -97,6 +109,12 @@ const createStyles = (colors) =>
       padding: 20,
       justifyContent: "center",
       backgroundColor: colors.background,
+    },
+    logo: {
+      width: 120,
+      height: 120,
+      alignSelf: "center",
+      marginBottom: 20,
     },
     hospitalTitle: {
       fontSize: 32,

@@ -22,6 +22,17 @@ export const AuthProvider = ({ children }) => {
         setUser(userData.data);
       }
     } catch (error) {
+      // Log detallado para debugging (solo en consola)
+      console.error("Error al verificar estado de autenticación:", error);
+
+      // Verificar si es un error de base de datos
+      if (error.message && error.message.includes("SQLSTATE")) {
+        console.error(
+          "Error de base de datos en checkAuthState:",
+          error.message
+        );
+      }
+
       console.log("No hay sesión activa");
       await AsyncStorage.removeItem("token");
     } finally {
@@ -44,8 +55,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || "Error en el login");
       }
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || err.message || "Error de conexión";
+      // El mensaje ya viene sanitizado desde el interceptor de axios
+      const errorMessage = err.message;
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -69,8 +80,8 @@ export const AuthProvider = ({ children }) => {
         throw new Error(response.message || "Error en el registro");
       }
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || err.message || "Error de conexión";
+      // El mensaje ya viene sanitizado desde el interceptor de axios
+      const errorMessage = err.message;
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

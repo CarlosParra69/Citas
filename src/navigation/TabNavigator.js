@@ -56,7 +56,6 @@ export default function TabNavigator() {
       {/* Todas las pestañas comunes */}
       <Tab.Screen name="Citas" component={CitasNavigator} />
       <Tab.Screen name="Médicos" component={MedicosNavigator} />
-      <Tab.Screen name="Perfil" component={PerfilNavigator} />
 
       {/* Pestañas específicas por rol */}
       {isSuperadmin && (
@@ -73,7 +72,7 @@ export default function TabNavigator() {
           <Tab.Screen name="Reportes" component={ReportesNavigator} />
         </>
       )}
-
+      <Tab.Screen name="Perfil" component={PerfilNavigator} />
       {isMedico && (
         <>
           <Tab.Screen

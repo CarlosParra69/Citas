@@ -2,7 +2,7 @@ import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import MedicosScreen from "../screens/Medicos/MedicosScreen";
 import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
-import CrearMedicoScreen from "../screens/CrearMedicoScreen";
+import CrearMedicoScreen from "../screens/Medicos/CrearMedicoScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();

@@ -9,11 +9,15 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
-import { getPacientes, updatePaciente, deletePaciente } from "../api/pacientes";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+import { useAuthContext } from "../../context/AuthContext";
+import {
+  getPacientes,
+  updatePaciente,
+  deletePaciente,
+} from "../../api/pacientes";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 const GestionPacientesScreen = ({ navigation }) => {
   const { user } = useAuthContext();

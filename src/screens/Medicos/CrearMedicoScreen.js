@@ -7,14 +7,14 @@ import {
   Alert,
   TouchableOpacity,
 } from "react-native";
-import { useAuthContext } from "../context/AuthContext";
-import { getEspecialidades } from "../api/especialidades";
-import { createMedico, updateMedico } from "../api/medicos";
-import InputField from "../components/InputField";
-import ButtonPrimary from "../components/ButtonPrimary";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+import { useAuthContext } from "../../context/AuthContext";
+import { getEspecialidades } from "../../api/especialidades";
+import { createMedico, updateMedico } from "../../api/medicos";
+import InputField from "../../components/InputField";
+import ButtonPrimary from "../../components/ButtonPrimary";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 // Componente para seleccionar horarios
 const HorariosSelector = ({ horarios, onHorariosChange, error }) => {

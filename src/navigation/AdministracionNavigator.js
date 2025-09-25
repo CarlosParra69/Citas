@@ -1,10 +1,10 @@
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import UsuariosScreen from "../screens/UsuariosScreen";
-import CrearUsuarioScreen from "../screens/CrearUsuarioScreen";
-import GestionMedicosScreen from "../screens/GestionMedicosScreen";
-import GestionEspecialidadesScreen from "../screens/GestionEspecialidadesScreen";
-import GestionPacientesScreen from "../screens/GestionPacientesScreen";
+import UsuariosScreen from "../screens/Usuarios/UsuariosScreen";
+import CrearUsuarioScreen from "../screens/Usuarios/CrearUsuarioScreen";
+import GestionMedicosScreen from "../screens/Medicos/GestionMedicosScreen";
+import GestionEspecialidadesScreen from "../screens/Especialidades/GestionEspecialidadesScreen";
+import GestionPacientesScreen from "../screens/Pacientes/GestionPacientesScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();

@@ -9,17 +9,17 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
+import { useAuthContext } from "../../context/AuthContext";
 import {
   getEspecialidades,
   createEspecialidad,
   updateEspecialidad,
   deleteEspecialidad,
-} from "../api/especialidades";
-import LoadingSpinner from "../components/LoadingSpinner";
-import ButtonPrimary from "../components/ButtonPrimary";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+} from "../../api/especialidades";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import ButtonPrimary from "../../components/ButtonPrimary";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 const GestionEspecialidadesScreen = ({ navigation }) => {
   const { user } = useAuthContext();

@@ -10,11 +10,11 @@ import {
   RefreshControl,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
-import { getEstadisticasMedico } from "../api/estadisticas";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
-import { useGlobalStyles } from "../styles/globalStyles";
+import { useAuthContext } from "../../context/AuthContext";
+import { getEstadisticasMedico } from "../../api/estadisticas";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
+import { useGlobalStyles } from "../../styles/globalStyles";
 
 const { width } = Dimensions.get("window");
 

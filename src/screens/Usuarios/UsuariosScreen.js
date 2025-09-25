@@ -9,10 +9,10 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { useAuthContext } from "../context/AuthContext";
-import { getUsuarios, updateUsuarioEstado } from "../api/usuarios";
-import LoadingSpinner from "../components/LoadingSpinner";
-import { useThemeColors } from "../utils/themeColors";
+import { useAuthContext } from "../../context/AuthContext";
+import { getUsuarios, updateUsuarioEstado } from "../../api/usuarios";
+import LoadingSpinner from "../../components/LoadingSpinner";
+import { useThemeColors } from "../../utils/themeColors";
 
 const UsuariosScreen = ({ navigation }) => {
   const colors = useThemeColors();

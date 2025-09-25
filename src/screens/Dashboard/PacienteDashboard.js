@@ -6,9 +6,9 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import StatCard from "../StatCard";
-import QuickActionCard from "../QuickActionCard";
-import ActivityFeed from "../ActivityFeed";
+import StatCard from "../../components/StatCard";
+import QuickActionCard from "../../components/QuickActionCard";
+import ActivityFeed from "../../components/ActivityFeed";
 import { useThemeColors } from "../../utils/themeColors";
 
 const PacienteDashboard = ({ dashboardData, navigation }) => {

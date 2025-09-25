@@ -31,6 +31,33 @@ axiosInstance.interceptors.request.use(
   }
 );
 
+// Función para sanitizar mensajes de error
+const sanitizeErrorMessage = (error) => {
+  // Log detallado para debugging (solo en consola)
+  console.error("Error detallado:", error);
+
+  // Extraer mensaje del servidor si existe
+  let errorMessage = error.response?.data?.message;
+
+  // Si no hay mensaje del servidor o es un error de conexión, usar mensaje genérico
+  if (!errorMessage) {
+    // Verificar si es un error de conexión de base de datos
+    if (error.message && error.message.includes("SQLSTATE")) {
+      console.error("Error de base de datos detectado:", error.message);
+      errorMessage =
+        "Error de conexión con el servidor. Por favor, inténtelo de nuevo más tarde.";
+    } else if (error.code === "ECONNABORTED") {
+      console.log("Error de timeout");
+      errorMessage =
+        "Tiempo de espera agotado. Verifique su conexión a internet.";
+    } else {
+      errorMessage = "Error de conexión. Verifique su conexión a internet.";
+    }
+  }
+
+  return errorMessage;
+};
+
 // Interceptor para manejar errores
 axiosInstance.interceptors.response.use(
   (response) => response,
@@ -40,9 +67,14 @@ axiosInstance.interceptors.response.use(
     console.log("Método:", error.config?.method);
     console.log("Status:", error.response?.status);
 
-    if (error.code === "ECONNABORTED") {
-      console.log("Error de timeout");
-    }
+    // Sanitizar el mensaje de error para evitar mostrar información sensible
+    const sanitizedMessage = sanitizeErrorMessage(error);
+
+    // Crear un nuevo error con el mensaje sanitizado
+    const sanitizedError = new Error(sanitizedMessage);
+    sanitizedError.response = error.response;
+    sanitizedError.config = error.config;
+    sanitizedError.code = error.code;
 
     // Solo eliminar token si es un error de autenticación real (no temporal)
     if (error.response?.status === 401) {
@@ -60,7 +92,7 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
+    return Promise.reject(sanitizedError);
   }
 );
 

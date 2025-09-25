@@ -8,12 +8,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { createUsuario } from "../api/usuarios";
-import InputField from "../components/InputField";
-import ButtonPrimary from "../components/ButtonPrimary";
-import GenderSelector from "../components/GenderSelector";
-import { useThemeColors } from "../utils/themeColors";
-import { useAuthContext } from "../context/AuthContext";
+import { createUsuario } from "../../api/usuarios";
+import InputField from "../../components/InputField";
+import ButtonPrimary from "../../components/ButtonPrimary";
+import GenderSelector from "../../components/GenderSelector";
+import { useThemeColors } from "../../utils/themeColors";
+import { useAuthContext } from "../../context/AuthContext";
 
 const CrearUsuarioScreen = ({ navigation }) => {
   const colors = useThemeColors();
