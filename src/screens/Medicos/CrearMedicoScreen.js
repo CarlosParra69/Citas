@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Platform,
 } from "react-native";
 import { useAuthContext } from "../../context/AuthContext";
 import { getEspecialidades } from "../../api/especialidades";
@@ -15,88 +16,155 @@ import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
+import {
+  DateTimePickerAndroid,
+  DateTimePickerIOS,
+} from "@react-native-community/datetimepicker";
 
-// Componente para seleccionar horarios
-const HorariosSelector = ({ horarios, onHorariosChange, error }) => {
-  const colors = useThemeColors();
+// Componente para seleccionar horarios con interfaz tipo alarma
+const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [pickerMode, setPickerMode] = useState("inicio");
 
   const diasSemana = [
-    { key: "lunes", label: "Lunes" },
-    { key: "martes", label: "Martes" },
-    { key: "miercoles", label: "Miércoles" },
-    { key: "jueves", label: "Jueves" },
-    { key: "viernes", label: "Viernes" },
-    { key: "sabado", label: "Sábado" },
-    { key: "domingo", label: "Domingo" },
+    { key: "lunes", label: "Lunes", color: "#FF6B6B" },
+    { key: "martes", label: "Martes", color: "#4ECDC4" },
+    { key: "miercoles", label: "Miércoles", color: "#45B7D1" },
+    { key: "jueves", label: "Jueves", color: "#96CEB4" },
+    { key: "viernes", label: "Viernes", color: "#FFEAA7" },
+    { key: "sabado", label: "Sábado", color: "#DDA0DD" },
+    { key: "domingo", label: "Domingo", color: "#98D8C8" },
   ];
 
-  const handleHorarioChange = (dia, horarioIndex, field, value) => {
-    const nuevosHorarios = { ...horarios };
-    if (!nuevosHorarios[dia]) nuevosHorarios[dia] = [];
+  const componentStyles = createHorariosStyles(colors);
 
-    if (field === "delete") {
-      nuevosHorarios[dia] = nuevosHorarios[dia].filter(
-        (_, i) => i !== horarioIndex
-      );
-    } else {
-      if (!nuevosHorarios[dia][horarioIndex]) {
-        nuevosHorarios[dia][horarioIndex] = { inicio: "", fin: "" };
+  const formatTime = (timeString) => {
+    if (!timeString) return "Seleccionar";
+    const [hours, minutes] = timeString.split(":");
+    return `${hours}:${minutes}`;
+  };
+
+  const handleTimeSelect = (event, selectedTime) => {
+    if (selectedTime && selectedDay && selectedSlot !== null) {
+      const timeString = selectedTime.toTimeString().slice(0, 5);
+      const nuevosHorarios = { ...horarios };
+
+      if (!nuevosHorarios[selectedDay]) nuevosHorarios[selectedDay] = [];
+
+      if (!nuevosHorarios[selectedDay][selectedSlot]) {
+        nuevosHorarios[selectedDay][selectedSlot] = { inicio: "", fin: "" };
       }
-      nuevosHorarios[dia][horarioIndex][field] = value;
-    }
 
-    onHorariosChange(dia, nuevosHorarios[dia]);
+      nuevosHorarios[selectedDay][selectedSlot][pickerMode] = timeString;
+      onHorariosChange(selectedDay, nuevosHorarios[selectedDay]);
+    }
+  };
+
+  const openTimePicker = (dia, slotIndex, mode) => {
+    setSelectedDay(dia);
+    setSelectedSlot(slotIndex);
+    setPickerMode(mode);
+
+    if (Platform.OS === "ios") {
+      setShowTimePicker(true);
+    } else {
+      DateTimePickerAndroid.open({
+        value: new Date(),
+        onChange: handleTimeSelect,
+        mode: "time",
+        is24Hour: true,
+      });
+    }
   };
 
   const addHorario = (dia) => {
     const nuevosHorarios = { ...horarios };
     if (!nuevosHorarios[dia]) nuevosHorarios[dia] = [];
-    nuevosHorarios[dia].push({ inicio: "08:00", fin: "12:00" });
+    nuevosHorarios[dia].push({ inicio: "08:00", fin: "17:00" });
     onHorariosChange(dia, nuevosHorarios[dia]);
+  };
+
+  const removeHorario = (dia, slotIndex) => {
+    const nuevosHorarios = { ...horarios };
+    if (nuevosHorarios[dia]) {
+      nuevosHorarios[dia] = nuevosHorarios[dia].filter(
+        (_, i) => i !== slotIndex
+      );
+      onHorariosChange(dia, nuevosHorarios[dia]);
+    }
   };
 
   return (
     <View>
       {diasSemana.map((dia) => (
-        <View key={dia.key} style={styles.diaContainer}>
-          <Text style={styles.diaLabel}>{dia.label}</Text>
+        <View key={dia.key} style={componentStyles.diaContainer}>
+          <View style={componentStyles.diaHeader}>
+            <View
+              style={[
+                componentStyles.diaIndicator,
+                { backgroundColor: dia.color },
+              ]}
+            />
+            <Text style={componentStyles.diaLabel}>{dia.label}</Text>
+          </View>
+
           {horarios[dia.key]?.map((horario, index) => (
-            <View key={index} style={styles.horarioRow}>
-              <InputField
-                label="Inicio"
-                placeholder="HH:MM"
-                value={horario.inicio || ""}
-                onChangeText={(value) =>
-                  handleHorarioChange(dia.key, index, "inicio", value)
-                }
-                style={styles.horarioInput}
-              />
-              <InputField
-                label="Fin"
-                placeholder="HH:MM"
-                value={horario.fin || ""}
-                onChangeText={(value) =>
-                  handleHorarioChange(dia.key, index, "fin", value)
-                }
-                style={styles.horarioInput}
-              />
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => handleHorarioChange(dia.key, index, "delete")}
-              >
-                <Text style={styles.deleteButtonText}>×</Text>
-              </TouchableOpacity>
+            <View key={index} style={componentStyles.horarioCard}>
+              <View style={componentStyles.horarioRow}>
+                <TouchableOpacity
+                  style={componentStyles.timeButton}
+                  onPress={() => openTimePicker(dia.key, index, "inicio")}
+                >
+                  <Text style={componentStyles.timeButtonIcon}>🕐</Text>
+                  <Text style={componentStyles.timeButtonText}>
+                    {formatTime(horario.inicio)}
+                  </Text>
+                </TouchableOpacity>
+
+                <Text style={componentStyles.timeSeparator}>a</Text>
+
+                <TouchableOpacity
+                  style={componentStyles.timeButton}
+                  onPress={() => openTimePicker(dia.key, index, "fin")}
+                >
+                  <Text style={componentStyles.timeButtonIcon}>🕐</Text>
+                  <Text style={componentStyles.timeButtonText}>
+                    {formatTime(horario.fin)}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={componentStyles.deleteSlotButton}
+                  onPress={() => removeHorario(dia.key, index)}
+                >
+                  <Text style={componentStyles.deleteSlotButtonText}>×</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ))}
+
           <TouchableOpacity
-            style={styles.addButton}
+            style={componentStyles.addButton}
             onPress={() => addHorario(dia.key)}
           >
-            <Text style={styles.addButtonText}>+ Agregar horario</Text>
+            <Text style={componentStyles.addButtonIcon}>⏰</Text>
+            <Text style={componentStyles.addButtonText}>Agregar horario</Text>
           </TouchableOpacity>
         </View>
       ))}
-      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {showTimePicker && Platform.OS === "ios" && (
+        <DateTimePickerIOS
+          value={new Date()}
+          mode="time"
+          is24Hour={true}
+          onChange={handleTimeSelect}
+        />
+      )}
+
+      {error && <Text style={componentStyles.errorText}>{error}</Text>}
     </View>
   );
 };
@@ -114,9 +182,13 @@ const CrearMedicoScreen = ({ navigation, route }) => {
     apellido: "",
     cedula: "",
     email: "",
+    password: "",
+    password_confirmation: "",
     telefono: "",
     especialidad_id: "",
     registro_medico: "",
+    tarifa_consulta: "",
+    biografia: "",
     horarios_atencion: {
       lunes: [],
       martes: [],
@@ -164,6 +236,8 @@ const CrearMedicoScreen = ({ navigation, route }) => {
         telefono: medico.telefono || "",
         especialidad_id: medico.especialidad_id || "",
         registro_medico: medico.registro_medico || "",
+        tarifa_consulta: medico.tarifa_consulta || "",
+        biografia: medico.biografia || "",
         horarios_atencion: medico.horarios_atencion || {
           lunes: [],
           martes: [],
@@ -222,6 +296,21 @@ const CrearMedicoScreen = ({ navigation, route }) => {
       newErrors.email = "Ingrese un email válido";
     }
 
+    if (!isEditing) {
+      if (!formData.password.trim()) {
+        newErrors.password = "La contraseña es requerida";
+      } else if (formData.password.trim().length < 6) {
+        newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+      }
+
+      if (!formData.password_confirmation.trim()) {
+        newErrors.password_confirmation =
+          "La confirmación de contraseña es requerida";
+      } else if (formData.password !== formData.password_confirmation) {
+        newErrors.password_confirmation = "Las contraseñas no coinciden";
+      }
+    }
+
     if (!formData.telefono.trim()) {
       newErrors.telefono = "El teléfono es requerido";
     } else if (formData.telefono.trim().length < 7) {
@@ -278,9 +367,19 @@ const CrearMedicoScreen = ({ navigation, route }) => {
         telefono: formData.telefono.trim(),
         especialidad_id: formData.especialidad_id,
         registro_medico: formData.registro_medico.trim(),
+        tarifa_consulta: formData.tarifa_consulta
+          ? parseFloat(formData.tarifa_consulta)
+          : null,
+        biografia: formData.biografia.trim(),
         horarios_atencion: formData.horarios_atencion,
         activo: formData.activo,
       };
+
+      // Agregar credenciales solo si no es edición
+      if (!isEditing) {
+        medicoData.password = formData.password;
+        medicoData.password_confirmation = formData.password_confirmation;
+      }
 
       let response;
       if (isEditing) {
@@ -376,6 +475,30 @@ const CrearMedicoScreen = ({ navigation, route }) => {
           error={errors.email}
         />
 
+        {!isEditing && (
+          <>
+            <InputField
+              label="Contraseña *"
+              placeholder="Ingrese la contraseña"
+              value={formData.password}
+              onChangeText={(value) => handleChange("password", value)}
+              secureTextEntry
+              error={errors.password}
+            />
+
+            <InputField
+              label="Confirmar Contraseña *"
+              placeholder="Confirme la contraseña"
+              value={formData.password_confirmation}
+              onChangeText={(value) =>
+                handleChange("password_confirmation", value)
+              }
+              secureTextEntry
+              error={errors.password_confirmation}
+            />
+          </>
+        )}
+
         <InputField
           label="Teléfono *"
           placeholder="Ingrese el teléfono"
@@ -426,6 +549,25 @@ const CrearMedicoScreen = ({ navigation, route }) => {
           error={errors.registro_medico}
         />
 
+        <InputField
+          label="Tarifa de Consulta"
+          placeholder="Ingrese la tarifa de consulta (opcional)"
+          value={formData.tarifa_consulta}
+          onChangeText={(value) => handleChange("tarifa_consulta", value)}
+          keyboardType="numeric"
+          error={errors.tarifa_consulta}
+        />
+
+        <InputField
+          label="Biografía"
+          placeholder="Ingrese una breve biografía del médico (opcional)"
+          value={formData.biografia}
+          onChangeText={(value) => handleChange("biografia", value)}
+          multiline
+          numberOfLines={4}
+          error={errors.biografia}
+        />
+
         <View style={styles.switchContainer}>
           <Text style={styles.label}>Estado</Text>
           <TouchableOpacity
@@ -449,6 +591,7 @@ const CrearMedicoScreen = ({ navigation, route }) => {
           horarios={formData.horarios_atencion}
           onHorariosChange={handleHorariosChange}
           error={errors.horarios_atencion}
+          colors={colors}
         />
       </View>
 
@@ -462,6 +605,118 @@ const CrearMedicoScreen = ({ navigation, route }) => {
     </ScrollView>
   );
 };
+
+// Create styles function for HorariosSelector component
+const createHorariosStyles = (colors) =>
+  StyleSheet.create({
+    diaContainer: {
+      marginBottom: 16,
+      padding: 12,
+      backgroundColor: colors.background,
+      borderRadius: 8,
+    },
+    diaHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    diaIndicator: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: 8,
+    },
+    diaLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.primary,
+      marginBottom: 8,
+    },
+    horarioCard: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.05,
+      shadowRadius: 2,
+      elevation: 2,
+    },
+    horarioRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    timeButton: {
+      flex: 1,
+      backgroundColor: colors.white,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      borderRadius: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    timeButtonIcon: {
+      fontSize: 16,
+    },
+    timeButtonText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.text,
+    },
+    timeSeparator: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.gray,
+      marginHorizontal: 8,
+    },
+    deleteSlotButton: {
+      backgroundColor: colors.error,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    deleteSlotButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      alignSelf: "flex-start",
+    },
+    addButtonIcon: {
+      fontSize: 16,
+    },
+    addButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    errorText: {
+      color: colors.error,
+      fontSize: 12,
+      marginTop: 4,
+    },
+  });
 
 // Create styles function that uses theme colors
 const createStyles = (colors) =>
@@ -566,53 +821,7 @@ const createStyles = (colors) =>
       color: colors.white,
       fontWeight: "600",
     },
-    diaContainer: {
-      marginBottom: 16,
-      padding: 12,
-      backgroundColor: colors.background,
-      borderRadius: 8,
-    },
-    diaLabel: {
-      fontSize: 16,
-      fontWeight: "600",
-      color: colors.primary,
-      marginBottom: 8,
-    },
-    horarioRow: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      marginBottom: 8,
-      gap: 8,
-    },
-    horarioInput: {
-      flex: 1,
-    },
-    deleteButton: {
-      backgroundColor: colors.error,
-      width: 40,
-      height: 40,
-      borderRadius: 8,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 20,
-    },
-    deleteButtonText: {
-      color: colors.white,
-      fontSize: 20,
-      fontWeight: "bold",
-    },
-    addButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: 8,
-      paddingHorizontal: 12,
-      borderRadius: 8,
-      alignSelf: "flex-start",
-    },
-    addButtonText: {
-      color: colors.white,
-      fontSize: 14,
-      fontWeight: "600",
-    },
+    // Los estilos de horarios ahora están en createHorariosStyles
   });
 
 export default CrearMedicoScreen;

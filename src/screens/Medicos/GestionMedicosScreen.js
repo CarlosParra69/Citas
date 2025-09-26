@@ -12,6 +12,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useAuthContext } from "../../context/AuthContext";
 import { getMedicos, updateMedico, deleteMedico } from "../../api/medicos";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
 
@@ -147,6 +148,12 @@ const GestionMedicosScreen = ({ navigation }) => {
     );
   };
 
+  const handleCreateMedico = () => {
+    navigation.navigate("MedicosNavigator", {
+      screen: "CrearMedicoScreen",
+    });
+  };
+
   const filteredMedicos = (Array.isArray(medicos) ? medicos : []).filter(
     (medico) => {
       const matchesSearch =
@@ -274,7 +281,14 @@ const GestionMedicosScreen = ({ navigation }) => {
     <View style={styles.container}>
       {/* Header con filtros */}
       <View style={styles.header}>
-        <Text style={styles.title}>Gestión de Médicos</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Gestión de Médicos</Text>
+          <ButtonPrimary
+            title="+ Crear Médico"
+            onPress={handleCreateMedico}
+            style={styles.createButton}
+          />
+        </View>
 
         {/* Barra de búsqueda */}
         <View style={styles.searchContainer}>
@@ -350,12 +364,21 @@ const createStyles = (colors) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.lightGray,
     },
+    headerTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
     title: {
       fontSize: 20,
       fontWeight: "bold",
       color: colors.primary,
-      marginBottom: 16,
-      textAlign: "center",
+      flex: 1,
+    },
+    createButton: {
+      backgroundColor: colors.success,
+      minWidth: 120,
     },
     searchContainer: {
       marginBottom: 12,

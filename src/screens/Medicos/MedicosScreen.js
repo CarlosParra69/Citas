@@ -10,12 +10,15 @@ import {
 import { getMedicos } from "../../api/medicos";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import CardItem from "../../components/CardItem";
+import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
+import { useRoleBasedData } from "../../hooks/useRoleBasedData";
 
 const MedicosScreen = ({ route, navigation }) => {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const { especialidadId, especialidadNombre } = route.params || {};
+  const { isSuperadmin } = useRoleBasedData();
 
   const [medicos, setMedicos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +72,10 @@ const MedicosScreen = ({ route, navigation }) => {
     });
   };
 
+  const handleCreateMedico = () => {
+    navigation.navigate("CrearMedicoScreen");
+  };
+
   const renderMedico = ({ item }) => {
     const nombreCompleto =
       item.nombre_completo || `${item.nombre} ${item.apellido}`;
@@ -118,6 +125,17 @@ const MedicosScreen = ({ route, navigation }) => {
           : "Todos los médicos disponibles"}
       </Text>
 
+      {/* Botón para crear médico - Solo visible para superadmin */}
+      {isSuperadmin && (
+        <View style={styles.createButtonContainer}>
+          <ButtonPrimary
+            title="+ Crear Médico"
+            onPress={handleCreateMedico}
+            style={styles.createButton}
+          />
+        </View>
+      )}
+
       {!medicos || medicos.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>No hay médicos disponibles</Text>
@@ -162,6 +180,14 @@ const createStyles = (colors) =>
       color: colors.gray,
       textAlign: "center",
       marginBottom: 20,
+    },
+    createButtonContainer: {
+      marginBottom: 16,
+      alignItems: "center",
+    },
+    createButton: {
+      minWidth: 150,
+      backgroundColor: colors.success,
     },
     emptyContainer: {
       flex: 1,

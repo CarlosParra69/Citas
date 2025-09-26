@@ -7,10 +7,53 @@ import {
 } from "react-native";
 import { useThemeColors } from "../utils/themeColors";
 
-const ButtonPrimary = ({ onPress, title, disabled, loading, style }) => {
-  const colors = useThemeColors();
+const ButtonPrimary = ({
+  onPress,
+  title,
+  disabled,
+  loading,
+  style,
+  colors: propColors,
+}) => {
+  const themeColors = useThemeColors();
+  const colors = propColors || themeColors;
+
+  // Verificar que colors tenga las propiedades necesarias
+  const safeColors = colors || {
+    primary: "#007AFF",
+    gray: "#CCCCCC",
+    white: "#FFFFFF",
+  };
+
   const isDisabled = disabled || loading;
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  // Crear estilos con manejo de errores
+  const styles = React.useMemo(() => {
+    try {
+      return createStyles(safeColors);
+    } catch (error) {
+      console.warn("Error creating ButtonPrimary styles:", error);
+      // Fallback styles
+      return {
+        button: {
+          backgroundColor: "#007AFF",
+          padding: 15,
+          borderRadius: 10,
+          alignItems: "center",
+          marginVertical: 10,
+        },
+        disabled: {
+          backgroundColor: "#CCCCCC",
+          opacity: 0.7,
+        },
+        text: {
+          color: "#FFFFFF",
+          fontSize: 16,
+          fontWeight: "bold",
+        },
+      };
+    }
+  }, [safeColors]);
 
   return (
     <TouchableOpacity
