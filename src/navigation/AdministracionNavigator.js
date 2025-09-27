@@ -5,6 +5,8 @@ import CrearUsuarioScreen from "../screens/Usuarios/CrearUsuarioScreen";
 import GestionMedicosScreen from "../screens/Medicos/GestionMedicosScreen";
 import GestionEspecialidadesScreen from "../screens/Especialidades/GestionEspecialidadesScreen";
 import GestionPacientesScreen from "../screens/Pacientes/GestionPacientesScreen";
+import CrearMedicoScreen from "../screens/Medicos/CrearMedicoScreen";
+import CrearPacienteScreen from "../screens/Pacientes/CrearPacienteScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();
@@ -48,6 +50,16 @@ export default function AdministracionNavigator() {
         name="GestionPacientesScreen"
         component={GestionPacientesScreen}
         options={{ title: "Gestión de Pacientes" }}
+      />
+      <Stack.Screen
+        name="CrearMedicoScreen"
+        component={CrearMedicoScreen}
+        options={{ title: "Crear Médico" }}
+      />
+      <Stack.Screen
+        name="CrearPacienteScreen"
+        component={CrearPacienteScreen}
+        options={{ title: "Crear Paciente" }}
       />
     </Stack.Navigator>
   );

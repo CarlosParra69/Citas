@@ -4,13 +4,7 @@ import DashboardScreen from "../screens/Reportes/DashboardScreen";
 import MedicosMasCitasScreen from "../screens/Reportes/MedicosMasCitasScreen";
 import PatronesCitasScreen from "../screens/Reportes/PatronesCitasScreen";
 import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
-import UsuariosScreen from "../screens/Usuarios/UsuariosScreen";
 import MisEstadisticasScreen from "../screens/Estadisticas/MisEstadisticasScreen";
-import CrearMedicoScreen from "../screens/Medicos/CrearMedicoScreen";
-import GestionCitasScreen from "../screens/Citas/GestionCitasScreen";
-import GestionEspecialidadesScreen from "../screens/Especialidades/GestionEspecialidadesScreen";
-import GestionMedicosScreen from "../screens/Medicos/GestionMedicosScreen";
-import GestionPacientesScreen from "../screens/Pacientes/GestionPacientesScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();
@@ -53,39 +47,9 @@ export default function ReportesNavigator() {
         })}
       />
       <Stack.Screen
-        name="UsuariosScreen"
-        component={UsuariosScreen}
-        options={{ title: "Gestión de Usuarios" }}
-      />
-      <Stack.Screen
         name="MisEstadisticasScreen"
         component={MisEstadisticasScreen}
         options={{ title: "Mis Estadísticas" }}
-      />
-      <Stack.Screen
-        name="CrearMedicoScreen"
-        component={CrearMedicoScreen}
-        options={{ title: "Crear Médico" }}
-      />
-      <Stack.Screen
-        name="GestionCitasScreen"
-        component={GestionCitasScreen}
-        options={{ title: "Gestión de Citas" }}
-      />
-      <Stack.Screen
-        name="GestionEspecialidadesScreen"
-        component={GestionEspecialidadesScreen}
-        options={{ title: "Gestión de Especialidades" }}
-      />
-      <Stack.Screen
-        name="GestionMedicosScreen"
-        component={GestionMedicosScreen}
-        options={{ title: "Gestión de Médicos" }}
-      />
-      <Stack.Screen
-        name="GestionPacientesScreen"
-        component={GestionPacientesScreen}
-        options={{ title: "Gestión de Pacientes" }}
       />
     </Stack.Navigator>
   );

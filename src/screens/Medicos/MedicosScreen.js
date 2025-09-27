@@ -187,7 +187,7 @@ const createStyles = (colors) =>
     },
     createButton: {
       minWidth: 150,
-      backgroundColor: colors.success,
+      backgroundColor: colors.primary,
     },
     emptyContainer: {
       flex: 1,

@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
+  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthContext } from "../../context/AuthContext";
 import { getUsuarios, updateUsuarioEstado } from "../../api/usuarios";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import QuickActionCard from "../../components/QuickActionCard";
 import { useThemeColors } from "../../utils/themeColors";
 
 const UsuariosScreen = ({ navigation }) => {
@@ -23,6 +25,40 @@ const UsuariosScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("todos");
   const styles = React.useMemo(() => createStyles(colors), [colors]);
+
+  // Acciones rápidas para superadmin
+  const quickActions = [
+    {
+      title: "Crear Usuario",
+      subtitle: "Registrar nuevo usuario en el sistema",
+      onPress: () => navigation.navigate("CrearUsuarioScreen"),
+    },
+    {
+      title: "Gestionar Médicos",
+      subtitle: "Administrar médicos del sistema",
+      onPress: () => navigation.navigate("GestionMedicosScreen"),
+    },
+    {
+      title: "Gestionar Especialidades",
+      subtitle: "Administrar especialidades médicas",
+      onPress: () => navigation.navigate("GestionEspecialidadesScreen"),
+    },
+    {
+      title: "Gestionar Pacientes",
+      subtitle: "Administrar pacientes del sistema",
+      onPress: () => navigation.navigate("GestionPacientesScreen"),
+    },
+    {
+      title: "Crear Médico",
+      subtitle: "Registrar nuevo médico",
+      onPress: () => navigation.navigate("CrearMedicoScreen"),
+    },
+    {
+      title: "Crear Paciente",
+      subtitle: "Registrar nuevo paciente",
+      onPress: () => navigation.navigate("CrearPacienteScreen"),
+    },
+  ];
 
   useFocusEffect(
     React.useCallback(() => {
@@ -268,6 +304,26 @@ const UsuariosScreen = ({ navigation }) => {
         </Text>
       </View>
 
+      {/* Acciones rápidas para superadmin */}
+      <View style={styles.quickActionsSection}>
+        <Text style={styles.sectionTitle}>Acciones Rápidas</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickActionsContainer}
+        >
+          {quickActions.map((action, index) => (
+            <QuickActionCard
+              key={index}
+              title={action.title}
+              subtitle={action.subtitle}
+              onPress={action.onPress}
+              style={styles.quickActionCard}
+            />
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Lista de usuarios */}
       <FlatList
         data={filteredUsuarios}
@@ -345,6 +401,27 @@ const createStyles = (colors) =>
       fontSize: 14,
       color: colors.gray,
       textAlign: "center",
+    },
+    quickActionsSection: {
+      backgroundColor: colors.white,
+      padding: 16,
+      marginBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.lightGray,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 12,
+    },
+    quickActionsContainer: {
+      gap: 12,
+      paddingRight: 16,
+    },
+    quickActionCard: {
+      width: 200,
+      marginBottom: 0,
     },
     usuarioCard: {
       backgroundColor: colors.white,
