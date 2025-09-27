@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // Configuraciones para diferentes entornos
   BASE_URL: __DEV__
-    ? "http://192.168.1.17:8000/api" // IP de la máquina host para desarrollo
+    ? "http://10.2.232.57:8000/api" // IP de la máquina host para desarrollo
     : "https://tu-api-produccion.com/api", // Producción
 
   TIMEOUT: 30000, // Aumentado a 30 segundos

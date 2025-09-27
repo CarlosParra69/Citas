@@ -1,6 +1,24 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  TouchableOpacity,
+  Image,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useAuthContext } from "../../context/AuthContext";
 import { createPaciente } from "../../api/pacientes";
+import { uploadAvatar } from "../../api/avatar";
+import {
+  saveImageToAvatars,
+  compressImage,
+  getRelativePath,
+  deleteAvatarImage,
+  avatarExists,
+} from "../../utils/fileUtils";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import GenderSelector from "../../components/GenderSelector";
@@ -8,7 +26,25 @@ import { useThemeColors } from "../../utils/themeColors";
 
 const CrearPacienteScreen = ({ navigation }) => {
   const colors = useThemeColors();
+  const { user } = useAuthContext();
   const styles = createStyles(colors);
+
+  useEffect(() => {
+    if (user?.rol !== "superadmin") {
+      Alert.alert(
+        "Acceso Denegado",
+        "No tienes permisos para acceder a esta pantalla",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+      return;
+    }
+  }, [user]);
+
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -30,6 +66,90 @@ const CrearPacienteScreen = ({ navigation }) => {
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const pickImage = async () => {
+    Alert.alert("Seleccionar imagen", "Elige una opción", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Galería",
+        onPress: pickImageFromGallery,
+      },
+      {
+        text: "Cámara",
+        onPress: pickImageFromCamera,
+      },
+    ]);
+  };
+
+  const pickImageFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image from gallery:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos requeridos",
+          "Necesitamos acceso a la cámara para tomar fotos"
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "No se pudo tomar la foto");
+    }
+  };
+
+  const processAndUploadImage = async (imageUri) => {
+    try {
+      setUploadingImage(true);
+
+      // Comprimir la imagen
+      const compressedUri = await compressImage(imageUri);
+
+      // Guardar en la carpeta avatars local
+      const localAvatarPath = await saveImageToAvatars(
+        compressedUri,
+        `temp_${Date.now()}`
+      );
+
+      return localAvatarPath;
+    } catch (error) {
+      console.error("Error procesando imagen:", error);
+      Alert.alert("Error", "No se pudo procesar la imagen");
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
@@ -106,22 +226,75 @@ const CrearPacienteScreen = ({ navigation }) => {
     setLoading(true);
 
     try {
-      // Enviar todos los campos, incluso los vacíos (la API debe manejar nulls)
       const dataToSend = { ...formData };
-
       const response = await createPaciente(dataToSend);
 
       if (response.data.success) {
-        Alert.alert(
-          "Éxito",
-          "Paciente y usuario creados exitosamente. Se han enviado las credenciales de acceso por email.",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+        // Buscar el ID del usuario en diferentes estructuras posibles
+        let userId = null;
+        if (response.data?.user?.id) {
+          userId = response.data.user.id;
+        } else if (response.data?.data?.user?.id) {
+          userId = response.data.data.user.id;
+        }
+
+        // Si hay imagen de perfil, subirla después de crear el paciente
+        if (profileImage && userId) {
+          try {
+            const localAvatarPath = await processAndUploadImage(profileImage);
+
+            if (localAvatarPath) {
+              const fileExists = await avatarExists(localAvatarPath);
+
+              if (fileExists) {
+                const formData = new FormData();
+                formData.append("avatar", {
+                  uri: localAvatarPath,
+                  type: "image/jpeg",
+                  name: `avatar_${userId}_${Date.now()}.jpg`,
+                });
+                formData.append("user_id", userId);
+
+                const uploadResult = await uploadAvatar(formData);
+
+                if (uploadResult.success) {
+                  Alert.alert(
+                    "Paciente creado",
+                    "El paciente ha sido creado exitosamente con foto de perfil.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => navigation.goBack(),
+                      },
+                    ]
+                  );
+                } else {
+                  Alert.alert(
+                    "Paciente creado",
+                    "El paciente ha sido creado exitosamente, pero no se pudo subir la foto de perfil."
+                  );
+                }
+              }
+            }
+          } catch (imageError) {
+            console.error("Error procesando imagen:", imageError);
+            Alert.alert(
+              "Paciente creado",
+              "El paciente ha sido creado exitosamente, pero ocurrió un error con la imagen de perfil."
+            );
+          }
+        } else {
+          Alert.alert(
+            "Paciente creado",
+            "El paciente ha sido creado exitosamente. Se han enviado las credenciales de acceso por email.",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+        }
       } else {
         throw new Error(response.data.message || "Error al crear paciente");
       }
@@ -142,6 +315,44 @@ const CrearPacienteScreen = ({ navigation }) => {
         <Text style={styles.subtitle}>
           Completa la información del paciente
         </Text>
+
+        {/* Foto de Perfil */}
+        <View style={styles.profileImageSection}>
+          <Text style={styles.sectionTitle}>Foto de Perfil</Text>
+          <TouchableOpacity
+            onPress={pickImage}
+            style={styles.avatarContainer}
+            disabled={uploadingImage}
+          >
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.info }]}>
+                <Text style={[styles.avatarText, { color: colors.white }]}>
+                  👤
+                </Text>
+              </View>
+            )}
+            <View
+              style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.cameraIconText, { color: colors.white }]}>
+                📷
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <Text style={[styles.profileImageHint, { color: colors.gray }]}>
+            Toca para {profileImage ? "cambiar" : "agregar"} foto de perfil
+          </Text>
+          {uploadingImage && (
+            <Text style={[styles.uploadingText, { color: colors.primary }]}>
+              Procesando imagen...
+            </Text>
+          )}
+        </View>
 
         {/* Información básica */}
         <View style={styles.section}>
@@ -356,6 +567,64 @@ const createStyles = (colors) =>
     submitButton: {
       marginTop: 8,
       marginBottom: 32,
+    },
+    profileImageSection: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      alignItems: "center",
+    },
+    avatarContainer: {
+      position: "relative",
+      marginBottom: 12,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    avatarText: {
+      fontSize: 32,
+      fontWeight: "bold",
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    cameraIcon: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    cameraIconText: {
+      fontSize: 12,
+    },
+    profileImageHint: {
+      fontSize: 14,
+      textAlign: "center",
+    },
+    uploadingText: {
+      fontSize: 12,
+      marginTop: 4,
+      fontStyle: "italic",
     },
   });
 

@@ -7,10 +7,20 @@ import {
   Alert,
   TouchableOpacity,
   Platform,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useAuthContext } from "../../context/AuthContext";
 import { getEspecialidades } from "../../api/especialidades";
 import { createMedico, updateMedico } from "../../api/medicos";
+import { uploadAvatar } from "../../api/avatar";
+import {
+  saveImageToAvatars,
+  compressImage,
+  getRelativePath,
+  deleteAvatarImage,
+  avatarExists,
+} from "../../utils/fileUtils";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -205,6 +215,8 @@ const CrearMedicoScreen = ({ navigation, route }) => {
   const [especialidades, setEspecialidades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (user?.rol !== "superadmin") {
@@ -265,6 +277,87 @@ const CrearMedicoScreen = ({ navigation, route }) => {
       Alert.alert("Error", "No se pudieron cargar las especialidades");
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const pickImage = async () => {
+    Alert.alert("Seleccionar imagen", "Elige una opción", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Galería",
+        onPress: pickImageFromGallery,
+      },
+      {
+        text: "Cámara",
+        onPress: pickImageFromCamera,
+      },
+    ]);
+  };
+
+  const pickImageFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image from gallery:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
+    }
+  };
+
+  const pickImageFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos requeridos",
+          "Necesitamos acceso a la cámara para tomar fotos"
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "No se pudo tomar la foto");
+    }
+  };
+
+  const processAndUploadImage = async (imageUri) => {
+    try {
+      setUploadingImage(true);
+
+      // Comprimir la imagen
+      const compressedUri = await compressImage(imageUri);
+
+      // Guardar en la carpeta avatars local
+      const localAvatarPath = await saveImageToAvatars(
+        compressedUri,
+        `temp_${Date.now()}`
+      );
+
+      return localAvatarPath;
+    } catch (error) {
+      console.error("Error procesando imagen:", error);
+      Alert.alert("Error", "No se pudo procesar la imagen");
+      return null;
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -390,16 +483,84 @@ const CrearMedicoScreen = ({ navigation, route }) => {
 
       if (response.success) {
         const action = isEditing ? "actualizado" : "creado";
-        Alert.alert(
-          `Médico ${action}`,
-          `El médico ha sido ${action} exitosamente.`,
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.goBack(),
-            },
-          ]
-        );
+
+        // Si hay imagen de perfil y no es edición, subirla después de crear el médico
+        if (profileImage && !isEditing && response.data?.user?.id) {
+          try {
+            const localAvatarPath = await processAndUploadImage(profileImage);
+            if (localAvatarPath) {
+              // Crear FormData para enviar al servidor usando el ID del usuario creado
+              const formData = new FormData();
+              formData.append("avatar", {
+                uri: localAvatarPath,
+                type: "image/jpeg",
+                name: `avatar_${response.data.user.id}_${Date.now()}.jpg`,
+              });
+              formData.append("user_id", response.data.user.id);
+
+              const uploadResult = await uploadAvatar(formData);
+              if (uploadResult.success) {
+                // console.log("Avatar subido exitosamente:", uploadResult.data.avatar_url);
+                Alert.alert(
+                  `Médico ${action}`,
+                  `El médico ha sido ${action} exitosamente con foto de perfil.`,
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              } else {
+                // console.warn("No se pudo subir el avatar:", uploadResult.message);
+                Alert.alert(
+                  `Médico ${action}`,
+                  `El médico ha sido ${action} exitosamente, pero no se pudo subir la foto de perfil.`,
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => navigation.goBack(),
+                    },
+                  ]
+                );
+              }
+            } else {
+              Alert.alert(
+                `Médico ${action}`,
+                `El médico ha sido ${action} exitosamente.`,
+                [
+                  {
+                    text: "OK",
+                    onPress: () => navigation.goBack(),
+                  },
+                ]
+              );
+            }
+          } catch (imageError) {
+            console.error("Error procesando imagen:", imageError);
+            Alert.alert(
+              `Médico ${action}`,
+              `El médico ha sido ${action} exitosamente, pero ocurrió un error con la imagen de perfil.`,
+              [
+                {
+                  text: "OK",
+                  onPress: () => navigation.goBack(),
+                },
+              ]
+            );
+          }
+        } else {
+          Alert.alert(
+            `Médico ${action}`,
+            `El médico ha sido ${action} exitosamente.`,
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+        }
       } else {
         Alert.alert(
           "Error",
@@ -435,6 +596,46 @@ const CrearMedicoScreen = ({ navigation, route }) => {
       <Text style={styles.title}>
         {isEditing ? "Editar Médico" : "Crear Nuevo Médico"}
       </Text>
+
+      {/* Foto de Perfil */}
+      {!isEditing && (
+        <View style={styles.profileImageSection}>
+          <Text style={styles.sectionTitle}>Foto de Perfil</Text>
+          <TouchableOpacity
+            onPress={pickImage}
+            style={styles.avatarContainer}
+            disabled={uploadingImage}
+          >
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.info }]}>
+                <Text style={[styles.avatarText, { color: colors.white }]}>
+                  👤
+                </Text>
+              </View>
+            )}
+            <View
+              style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.cameraIconText, { color: colors.white }]}>
+                📷
+              </Text>
+            </View>
+          </TouchableOpacity>
+          <Text style={[styles.profileImageHint, { color: colors.gray }]}>
+            Toca para {profileImage ? "cambiar" : "agregar"} foto de perfil
+          </Text>
+          {uploadingImage && (
+            <Text style={[styles.uploadingText, { color: colors.primary }]}>
+              Procesando imagen...
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* Información Personal */}
       <View style={styles.section}>
@@ -567,21 +768,6 @@ const CrearMedicoScreen = ({ navigation, route }) => {
           numberOfLines={4}
           error={errors.biografia}
         />
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.label}>Estado</Text>
-          <TouchableOpacity
-            style={[
-              styles.switch,
-              formData.activo ? styles.switchActive : styles.switchInactive,
-            ]}
-            onPress={() => handleChange("activo", !formData.activo)}
-          >
-            <Text style={styles.switchText}>
-              {formData.activo ? "Activo" : "Inactivo"}
-            </Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       {/* Horarios de Atención */}
@@ -820,6 +1006,64 @@ const createStyles = (colors) =>
     switchText: {
       color: colors.white,
       fontWeight: "600",
+    },
+    profileImageSection: {
+      backgroundColor: colors.white,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      alignItems: "center",
+    },
+    avatarContainer: {
+      position: "relative",
+      marginBottom: 12,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+    },
+    avatarText: {
+      fontSize: 32,
+      fontWeight: "bold",
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+    },
+    cameraIcon: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    cameraIconText: {
+      fontSize: 12,
+    },
+    profileImageHint: {
+      fontSize: 14,
+      textAlign: "center",
+    },
+    uploadingText: {
+      fontSize: 12,
+      marginTop: 4,
+      fontStyle: "italic",
     },
     // Los estilos de horarios ahora están en createHorariosStyles
   });

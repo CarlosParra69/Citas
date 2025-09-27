@@ -14,15 +14,9 @@ axiosInstance.interceptors.request.use(
     const token = await AsyncStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log(
-        `Enviando token para ${config.method?.toUpperCase()} ${
-          config.url
-        } - Token: ${token.substring(0, 20)}...`
-      );
+      // console.log(`Enviando token para ${config.method?.toUpperCase()} ${config.url} - Token: ${token.substring(0, 20)}...`);
     } else {
-      console.log(
-        `No hay token para ${config.method?.toUpperCase()} ${config.url}`
-      );
+      // console.log(`No hay token para ${config.method?.toUpperCase()} ${config.url}`);
     }
     return config;
   },
@@ -47,7 +41,7 @@ const sanitizeErrorMessage = (error) => {
       errorMessage =
         "Error de conexión con el servidor. Por favor, inténtelo de nuevo más tarde.";
     } else if (error.code === "ECONNABORTED") {
-      console.log("Error de timeout");
+      // console.log("Error de timeout");
       errorMessage =
         "Tiempo de espera agotado. Verifique su conexión a internet.";
     } else {
@@ -62,10 +56,10 @@ const sanitizeErrorMessage = (error) => {
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.log("Error de red:", error.message);
-    console.log("URL solicitada:", error.config?.url);
-    console.log("Método:", error.config?.method);
-    console.log("Status:", error.response?.status);
+    // console.log("Error de red:", error.message);
+    // console.log("URL solicitada:", error.config?.url);
+    // console.log("Método:", error.config?.method);
+    // console.log("Status:", error.response?.status);
 
     // Sanitizar el mensaje de error para evitar mostrar información sensible
     const sanitizedMessage = sanitizeErrorMessage(error);
@@ -79,7 +73,7 @@ axiosInstance.interceptors.response.use(
     // Solo eliminar token si es un error de autenticación real (no temporal)
     if (error.response?.status === 401) {
       const errorCode = error.response?.data?.error_code;
-      console.log("Código de error:", errorCode);
+      // console.log("Código de error:", errorCode);
 
       // Solo eliminar token si es un error de token expirado o inválido
       if (
@@ -87,7 +81,7 @@ axiosInstance.interceptors.response.use(
         errorCode === "TOKEN_INVALID" ||
         errorCode === "TOKEN_ABSENT"
       ) {
-        console.log("Eliminando token por error de autenticación");
+        // console.log("Eliminando token por error de autenticación");
         await AsyncStorage.removeItem("token");
       }
     }

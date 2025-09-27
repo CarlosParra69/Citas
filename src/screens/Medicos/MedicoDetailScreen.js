@@ -6,8 +6,11 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  TouchableOpacity,
+  Image,
 } from "react-native";
 import { getMedicoById, getMedicoDisponibilidad } from "../../api/medicos";
+import { getAvatarByUserId } from "../../api/avatar";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
@@ -22,10 +25,17 @@ const MedicoDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [medicoAvatar, setMedicoAvatar] = useState(null);
 
   useEffect(() => {
     loadMedicoData();
   }, [medicoId]);
+
+  useEffect(() => {
+    if (medico?.user?.id) {
+      loadMedicoAvatar();
+    }
+  }, [medico]);
 
   useEffect(() => {
     if (error) {
@@ -54,7 +64,7 @@ const MedicoDetailScreen = ({ route, navigation }) => {
             setDisponibilidad(disponibilidadResponse.data);
           }
         } catch (dispError) {
-          console.log("No se pudo cargar disponibilidad:", dispError);
+          // console.log("No se pudo cargar disponibilidad:", dispError);
         }
       } else {
         throw new Error(
@@ -68,6 +78,29 @@ const MedicoDetailScreen = ({ route, navigation }) => {
       console.error("Error loading medico data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMedicoAvatar = async () => {
+    try {
+      if (!medico.user || !medico.user.id) {
+        // Si no hay usuario, intentar buscar por email
+        if (medico.email) {
+          // TODO: Implementar búsqueda de usuario por email
+        }
+        return;
+      }
+
+      // Usar el user_id del médico para obtener su avatar
+      const result = await getAvatarByUserId(medico.user.id);
+
+      if (result.success && result.data.avatar_url) {
+        setMedicoAvatar(result.data.avatar_url);
+      } else {
+        // console.log("No se pudo obtener el avatar:", result.message);
+      }
+    } catch (error) {
+      console.error("Error cargando avatar del médico:", error);
     }
   };
 
@@ -88,7 +121,24 @@ const MedicoDetailScreen = ({ route, navigation }) => {
   };
 
   const formatHorarios = (horarios) => {
-    if (!horarios || typeof horarios !== "object") return "No especificado";
+    if (!horarios) return "No especificado";
+
+    let horariosObj;
+
+    // Si es string JSON, convertirlo a objeto
+    if (typeof horarios === "string") {
+      try {
+        horariosObj = JSON.parse(horarios);
+        // console.log("Horarios parseados desde JSON:", horariosObj);
+      } catch (e) {
+        console.error("Error parseando horarios JSON:", e);
+        return "Error en formato de horarios";
+      }
+    } else if (typeof horarios === "object") {
+      horariosObj = horarios;
+    } else {
+      return "Formato de horarios no válido";
+    }
 
     const diasSemana = {
       lunes: "Lunes",
@@ -100,18 +150,54 @@ const MedicoDetailScreen = ({ route, navigation }) => {
       domingo: "Domingo",
     };
 
-    return (
-      Object.entries(horarios)
-        .filter(([dia, horario]) => horario && (horario.inicio || horario.fin))
-        .map(([dia, horario]) => {
-          const diaFormateado = diasSemana[dia] || dia;
-          if (typeof horario === "object" && horario.inicio && horario.fin) {
-            return `${diaFormateado}: ${horario.inicio} - ${horario.fin}`;
-          }
+    const horariosFiltrados = Object.entries(horariosObj)
+      .filter(([dia, horario]) => {
+        if (Array.isArray(horario) && horario.length > 0) {
+          return true; // Si es array con elementos
+        }
+        if (
+          typeof horario === "object" &&
+          horario &&
+          (horario.inicio || horario.fin)
+        ) {
+          return true; // Si es objeto con inicio/fin
+        }
+        return false;
+      })
+      .map(([dia, horario]) => {
+        const diaFormateado = diasSemana[dia] || dia;
+
+        if (Array.isArray(horario)) {
+          // Si es array de objetos como [{"inicio": "08:00", "fin": "12:00"}]
+          const horariosFormateados = horario.map((h) => {
+            if (typeof h === "object" && h.inicio && h.fin) {
+              return `${h.inicio} - ${h.fin}`;
+            } else if (typeof h === "string") {
+              return h;
+            }
+            return String(h);
+          });
+          return `${diaFormateado}: ${horariosFormateados.join(", ")}`;
+        } else if (
+          typeof horario === "object" &&
+          horario.inicio &&
+          horario.fin
+        ) {
+          // Si es objeto como {inicio: "08:00", fin: "12:00"}
+          return `${diaFormateado}: ${horario.inicio} - ${horario.fin}`;
+        } else if (typeof horario === "string") {
+          // Si es string directo
           return `${diaFormateado}: ${horario}`;
-        })
-        .join("\n") || "No especificado"
-    );
+        }
+        return `${diaFormateado}: ${horario}`;
+      });
+
+    const resultado =
+      horariosFiltrados.length > 0
+        ? horariosFiltrados.join("\n")
+        : "No especificado";
+
+    return resultado;
   };
 
   if (loading && !refreshing) {
@@ -142,13 +228,37 @@ const MedicoDetailScreen = ({ route, navigation }) => {
       >
         {/* Información básica del médico */}
         <View style={styles.medicoCard}>
-          <Text style={styles.medicoNombre}>{nombreCompleto}</Text>
+          <View style={styles.medicoHeader}>
+            {/* Avatar del médico */}
+            <View style={styles.avatarContainer}>
+              {medicoAvatar ? (
+                <Image
+                  source={{ uri: medicoAvatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View
+                  style={[styles.avatar, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.avatarText, { color: colors.white }]}>
+                    {nombreCompleto
+                      ? nombreCompleto.charAt(0).toUpperCase()
+                      : "?"}
+                  </Text>
+                </View>
+              )}
+            </View>
 
-          {medico.especialidad && (
-            <Text style={styles.especialidad}>
-              {medico.especialidad.nombre}
-            </Text>
-          )}
+            <View style={styles.medicoInfo}>
+              <Text style={styles.medicoNombre}>{nombreCompleto}</Text>
+
+              {medico.especialidad && (
+                <Text style={styles.especialidad}>
+                  {medico.especialidad.nombre}
+                </Text>
+              )}
+            </View>
+          </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.label}>Registro Médico:</Text>
@@ -215,11 +325,35 @@ const MedicoDetailScreen = ({ route, navigation }) => {
         {disponibilidad && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Disponibilidad Hoy</Text>
-            <Text style={styles.disponibilidad}>
-              {disponibilidad.disponible
-                ? "Disponible para citas"
-                : "No disponible hoy"}
-            </Text>
+            <View style={styles.disponibilidadContainer}>
+              <Text
+                style={[
+                  styles.disponibilidad,
+                  {
+                    color: disponibilidad.disponible
+                      ? colors.success
+                      : colors.error,
+                  },
+                ]}
+              >
+                {disponibilidad.disponible
+                  ? "✅ Disponible para citas"
+                  : "❌ No disponible hoy"}
+              </Text>
+
+              {disponibilidad.horarios_atencion && (
+                <Text style={styles.disponibilidadDetalle}>
+                  Horario: {formatHorarios(disponibilidad.horarios_atencion)}
+                </Text>
+              )}
+
+              {disponibilidad.horas_ocupadas &&
+                disponibilidad.horas_ocupadas.length > 0 && (
+                  <Text style={styles.disponibilidadDetalle}>
+                    Horas ocupadas: {disponibilidad.horas_ocupadas.join(", ")}
+                  </Text>
+                )}
+            </View>
           </View>
         )}
 
@@ -247,6 +381,25 @@ const createStyles = (colors) =>
       flex: 1,
       padding: 16,
     },
+    avatarContainer: {
+      marginRight: 16,
+    },
+    avatar: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      fontSize: 24,
+      fontWeight: "bold",
+    },
+    avatarImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+    },
     medicoCard: {
       backgroundColor: colors.white,
       borderRadius: 12,
@@ -260,6 +413,14 @@ const createStyles = (colors) =>
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 3,
+    },
+    medicoHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    medicoInfo: {
+      flex: 1,
     },
     medicoNombre: {
       fontSize: 24,
@@ -341,10 +502,17 @@ const createStyles = (colors) =>
       color: colors.text,
       lineHeight: 22,
     },
+    disponibilidadContainer: {
+      gap: 8,
+    },
     disponibilidad: {
       fontSize: 16,
-      color: colors.text,
       fontWeight: "500",
+    },
+    disponibilidadDetalle: {
+      fontSize: 14,
+      color: colors.gray,
+      marginTop: 4,
     },
     agendarButton: {
       marginTop: 8,

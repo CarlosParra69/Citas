@@ -44,15 +44,33 @@ const PacientesScreen = ({ navigation }) => {
       setError(null);
       const response = await getPacientes();
 
-      if (response.data.success) {
-        const pacientesData = response.data.data || [];
+      if (response.data?.success) {
+        // La API devuelve datos paginados de Laravel
+        // response.data es el objeto de respuesta, response.data.data es el objeto paginado
+        // response.data.data.data es el array de pacientes
+        const pacientesData = response.data?.data?.data || [];
         setPacientes(pacientesData);
       } else {
-        throw new Error(response.data.message || "Error al cargar pacientes");
+        throw new Error(response.data?.message || "Error al cargar pacientes");
       }
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || err.message || "Error de conexión";
+      let errorMessage = "Error al cargar pacientes";
+
+      if (err.response?.status === 401) {
+        errorMessage = "Sesión expirada. Por favor, inicie sesión nuevamente.";
+      } else if (err.response?.status === 403) {
+        errorMessage = "No tiene permisos para ver los pacientes.";
+      } else if (err.response?.status >= 500) {
+        errorMessage = "Error del servidor. Inténtelo más tarde.";
+      } else if (err.code === "ECONNABORTED") {
+        errorMessage = "Tiempo de espera agotado. Verifique su conexión.";
+      } else if (!err.response) {
+        errorMessage = "Error de conexión. Verifique su conexión a internet.";
+      } else {
+        errorMessage =
+          err.response?.data?.message || err.message || errorMessage;
+      }
+
       setError(errorMessage);
       console.error("Error loading pacientes:", err);
     } finally {

@@ -72,7 +72,7 @@ export default function TabNavigator() {
           <Tab.Screen name="Reportes" component={ReportesNavigator} />
         </>
       )}
-      <Tab.Screen name="Perfil" component={PerfilNavigator} />
+
       {isMedico && (
         <>
           <Tab.Screen
@@ -82,7 +82,7 @@ export default function TabNavigator() {
           <Tab.Screen name="Reportes" component={ReportesNavigator} />
         </>
       )}
-
+      <Tab.Screen name="Perfil" component={PerfilNavigator} />
       {isPaciente && (
         <>{/* Los pacientes solo tienen acceso a Citas, Médicos y Perfil */}</>
       )}

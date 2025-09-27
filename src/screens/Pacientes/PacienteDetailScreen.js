@@ -6,8 +6,11 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  TouchableOpacity,
+  Image,
 } from "react-native";
 import { getPacienteById, getPacienteHistorial } from "../../api/pacientes";
+import { getAvatarByUserId, getAvatarImage } from "../../api/avatar";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import CardItem from "../../components/CardItem";
@@ -24,10 +27,17 @@ const PacienteDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [pacienteAvatar, setPacienteAvatar] = useState(null);
 
   useEffect(() => {
     loadPacienteData();
   }, [pacienteId]);
+
+  useEffect(() => {
+    if (paciente?.user?.id) {
+      loadPacienteAvatar();
+    }
+  }, [paciente]);
 
   useEffect(() => {
     if (error) {
@@ -58,7 +68,9 @@ const PacienteDetailScreen = ({ route, navigation }) => {
       }
 
       if (historialResponse.data.success) {
-        setHistorial(historialResponse.data.data || []);
+        // Asegurar que siempre sea un array
+        const historialData = historialResponse.data.data;
+        setHistorial(Array.isArray(historialData) ? historialData : []);
       }
     } catch (err) {
       const errorMessage =
@@ -67,6 +79,35 @@ const PacienteDetailScreen = ({ route, navigation }) => {
       console.error("Error loading paciente data:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPacienteAvatar = async () => {
+    try {
+      if (!paciente.user || !paciente.user.id) {
+        return;
+      }
+
+      // Si el paciente ya tiene foto en user.foto, usarla directamente
+      if (paciente.user.foto) {
+        const imageUrl = await getAvatarImage(paciente.user.foto);
+        setPacienteAvatar(imageUrl);
+        return;
+      }
+
+      // Usar el endpoint /api/avatar/user/{userId} para obtener el avatar
+      const result = await getAvatarByUserId(paciente.user.id);
+
+      if (result.success && result.data.avatar_path) {
+        const imageUrl = await getAvatarImage(result.data.avatar_path);
+        if (imageUrl) {
+          setPacienteAvatar(imageUrl);
+        }
+      } else if (result.success && result.data.avatar_url) {
+        setPacienteAvatar(result.data.avatar_url);
+      }
+    } catch (error) {
+      console.error("Error cargando avatar del paciente:", error);
     }
   };
 
@@ -142,7 +183,31 @@ const PacienteDetailScreen = ({ route, navigation }) => {
       >
         {/* Información básica del paciente */}
         <View style={styles.pacienteCard}>
-          <Text style={styles.pacienteNombre}>{nombreCompleto}</Text>
+          <View style={styles.pacienteHeader}>
+            {/* Avatar del paciente */}
+            <View style={styles.avatarContainer}>
+              {pacienteAvatar ? (
+                <Image
+                  source={{ uri: pacienteAvatar }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View
+                  style={[styles.avatar, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={[styles.avatarText, { color: colors.white }]}>
+                    {nombreCompleto
+                      ? nombreCompleto.charAt(0).toUpperCase()
+                      : "?"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.pacienteInfo}>
+              <Text style={styles.pacienteNombre}>{nombreCompleto}</Text>
+            </View>
+          </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.label}>Cédula:</Text>
@@ -255,7 +320,7 @@ const PacienteDetailScreen = ({ route, navigation }) => {
             Historial Médico ({historial.length})
           </Text>
 
-          {!historial || historial.length === 0 ? (
+          {!historial || !Array.isArray(historial) || historial.length === 0 ? (
             <Text style={styles.emptyHistorial}>
               No hay historial médico disponible
             </Text>
@@ -439,6 +504,33 @@ const createStyles = (colors) =>
       color: colors.error,
       textAlign: "center",
       marginBottom: 20,
+    },
+    pacienteHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 16,
+    },
+    avatarContainer: {
+      marginRight: 16,
+    },
+    avatar: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      fontSize: 24,
+      fontWeight: "bold",
+    },
+    avatarImage: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+    },
+    pacienteInfo: {
+      flex: 1,
     },
   });
 
