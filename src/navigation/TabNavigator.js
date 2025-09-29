@@ -72,6 +72,7 @@ export default function TabNavigator() {
       {/* Pestañas específicas por rol */}
       {isSuperadmin && (
         <>
+          <Tab.Screen name="Médicos" component={MedicosNavigator} />
           <Tab.Screen
             name="Especialidades"
             component={EspecialidadesNavigator}
