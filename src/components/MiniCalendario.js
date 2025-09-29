@@ -28,7 +28,7 @@ const MiniCalendario = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
-  const [tempDateTime, setTempDateTime] = useState(new Date());
+  const [tempDateTime, setTempDateTime] = useState(selectedDate || new Date());
   const [medicoHorarios, setMedicoHorarios] = useState([]);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
   const [lastLoadParams, setLastLoadParams] = useState({
@@ -38,6 +38,16 @@ const MiniCalendario = ({
   const [localAvailability, setLocalAvailability] = useState(null);
   const [localCheckingAvailability, setLocalCheckingAvailability] =
     useState(false);
+
+  // Sincronizar tempDateTime con selectedDate cuando cambie
+  useEffect(() => {
+    if (
+      selectedDate &&
+      (!tempDateTime || selectedDate.getTime() !== tempDateTime.getTime())
+    ) {
+      setTempDateTime(selectedDate);
+    }
+  }, [selectedDate]);
 
   // Cargar horarios disponibles del médico cuando cambie la fecha o el médico
   useEffect(() => {
@@ -266,12 +276,11 @@ const MiniCalendario = ({
       return;
     }
 
-    // Establecer la fecha temporal para cargar horarios
+    // Actualizar la fecha temporal para cargar horarios
     setTempDateTime(selectedDate);
 
     // Si hay un médico seleccionado, mostrar modal con horarios
     if (medicoId) {
-      setTempDateTime(selectedDate);
       // Cargar horarios antes de mostrar el modal
       loadMedicoHorarios()
         .then(() => {
@@ -290,29 +299,24 @@ const MiniCalendario = ({
     setSelectedTime(time);
     const [hours, minutes] = time.split(":");
 
-    // SOLUCIÓN FINAL: Crear fecha usando toLocaleDateString para mantener zona horaria local
-    const today = new Date();
-    const localDate = today.toLocaleDateString("es-CO", {
-      timeZone: "America/Bogota",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    // Usar la fecha seleccionada (tempDateTime) en lugar de la fecha actual
+    if (!tempDateTime) {
+      console.error("No hay fecha seleccionada");
+      return;
+    }
 
-    // Parsear correctamente la fecha local (DD/MM/YYYY)
-    const [day, month, year] = localDate.split("/");
-
-    // Crear fecha en zona horaria local de Colombia
+    // Crear fecha usando la fecha seleccionada con la hora elegida
     const targetDate = new Date(
-      parseInt(year),
-      parseInt(month) - 1,
-      parseInt(day),
+      tempDateTime.getFullYear(),
+      tempDateTime.getMonth(),
+      tempDateTime.getDate(),
       parseInt(hours),
       parseInt(minutes),
       0,
       0
     );
 
+    // Llamar a la función del padre para actualizar la fecha seleccionada
     onDateSelect(targetDate);
 
     if (onAvailabilityCheck) {
@@ -333,10 +337,7 @@ const MiniCalendario = ({
   const handleCloseModal = () => {
     setShowTimePicker(false);
     setSelectedTime("");
-    // Limpiar la fecha si no se seleccionó una hora
-    if (!selectedDate) {
-      setTempDateTime(new Date());
-    }
+    // No limpiar la fecha seleccionada, mantenerla para que el usuario pueda intentar de nuevo
   };
 
   const navigateMonth = (direction) => {
@@ -506,7 +507,13 @@ const MiniCalendario = ({
       {selectedDate && (
         <View style={styles.selectedDateContainer}>
           <Text style={styles.selectedDateText}>
-            Fecha seleccionada: {selectedDate.toLocaleDateString("es-ES")}
+            Fecha seleccionada:{" "}
+            {selectedDate.toLocaleDateString("es-ES", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
           </Text>
 
           <TouchableOpacity
@@ -550,11 +557,22 @@ const MiniCalendario = ({
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
               🕐 Selecciona una Hora -{" "}
-              {tempDateTime?.toLocaleDateString("es-ES")}
+              {tempDateTime?.toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </Text>
 
             <Text style={styles.modalDate}>
-              📅 {tempDateTime?.toLocaleDateString("es-ES")}
+              📅{" "}
+              {tempDateTime?.toLocaleDateString("es-ES", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </Text>
 
             {renderTimeSlots()}
@@ -702,55 +720,56 @@ const createStyles = (colors) =>
     modalContent: {
       backgroundColor: colors.surface,
       borderRadius: 20,
-      padding: 16,
-      width: "95%",
-      maxWidth: 380,
-      maxHeight: "75%",
-      minHeight: 280,
-      elevation: 20,
+      padding: 24,
+      width: "96%",
+      maxWidth: 450,
+      maxHeight: "90%",
+      minHeight: 400,
+      elevation: 30,
       shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
-        height: 10,
+        height: 15,
       },
-      shadowOpacity: 0.5,
-      shadowRadius: 15,
+      shadowOpacity: 0.7,
+      shadowRadius: 25,
       borderWidth: 2,
       borderColor: colors.border,
     },
     modalTitle: {
-      fontSize: 18,
+      fontSize: 20,
       fontWeight: "600",
       color: colors.text,
       textAlign: "center",
-      marginBottom: 10,
+      marginBottom: 12,
     },
     modalDate: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: "500",
-      color: colors.primary,
+      color: colors.text,
       textAlign: "center",
-      marginBottom: 10,
+      marginBottom: 16,
     },
     // Estilos de modalStatus eliminados - ya no se usa
     timeSlotsContainer: {
       flex: 1,
-      maxHeight: 250,
-      minHeight: 120,
+      maxHeight: 320,
+      minHeight: 180,
     },
     timeSlotsContent: {
-      paddingHorizontal: 8,
-      paddingVertical: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 16,
       alignItems: "center",
+      justifyContent: "center",
     },
     // Estilos de timeButtonsContainer y timeSlotsTitle eliminados - ya no se usa
     timeGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "space-around",
+      justifyContent: "center",
       alignItems: "center",
-      paddingVertical: 5,
-      gap: 4,
+      paddingVertical: 8,
+      gap: 8,
     },
     // Estilos de timeSlot eliminados - ya no se usa
     timeButton: {
@@ -758,21 +777,20 @@ const createStyles = (colors) =>
       borderWidth: 2,
       borderColor: colors.primary,
       borderRadius: 12,
-      padding: 10,
-      margin: 4,
-      minWidth: "48%",
-      maxWidth: "48%",
+      padding: 14,
+      margin: 6,
+      width: "48%",
       alignItems: "center",
       justifyContent: "center",
-      minHeight: 45,
-      elevation: 3,
+      minHeight: 50,
+      elevation: 4,
       shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
-        height: 2,
+        height: 3,
       },
-      shadowOpacity: 0.15,
-      shadowRadius: 6,
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
     },
     selectedTimeButton: {
       backgroundColor: colors.primary,
@@ -781,11 +799,11 @@ const createStyles = (colors) =>
       elevation: 6,
     },
     timeButtonText: {
-      fontSize: 14,
-      color: colors.primary,
+      fontSize: 16,
+      color: colors.text,
       fontWeight: "700",
       textAlign: "center",
-      lineHeight: 16,
+      lineHeight: 18,
     },
     selectedTimeButtonText: {
       color: colors.white,
@@ -817,10 +835,11 @@ const createStyles = (colors) =>
       opacity: 0.7,
     },
     closeButton: {
-      marginTop: 16,
-      padding: 12,
+      marginTop: 24,
+      padding: 18,
       backgroundColor: colors.error,
-      borderRadius: 8,
+      borderRadius: 12,
+      marginHorizontal: 12,
     },
     closeButtonText: {
       color: colors.white,

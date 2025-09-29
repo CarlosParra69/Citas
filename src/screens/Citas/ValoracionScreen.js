@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useThemeColors } from "../../utils/themeColors";
 import { useCitas } from "../../context/CitasContext";
@@ -96,7 +98,7 @@ const ValoracionScreen = ({ navigation, route }) => {
         { text: "Cancelar", style: "cancel" },
         {
           text: "Salir",
-          onPress: () => navigation.navigate("CitasHoyScreen"),
+          onPress: () => navigation.navigate("CitasMain"),
         },
       ]
     );
@@ -124,7 +126,7 @@ const ValoracionScreen = ({ navigation, route }) => {
       Alert.alert("Éxito", "Cita completada correctamente", [
         {
           text: "OK",
-          onPress: () => navigation.navigate("CitasHoyScreen"),
+          onPress: () => navigation.navigate("CitasMain"),
         },
       ]);
     } catch (error) {
@@ -138,96 +140,102 @@ const ValoracionScreen = ({ navigation, route }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Valoración del Paciente</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+    >
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>Valoración del Paciente</Text>
 
-      {/* Diagnóstico */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Diagnóstico *</Text>
-        <TextInput
-          style={[styles.textArea, errors.diagnostico && styles.inputError]}
-          placeholder="Ingrese el diagnóstico del paciente"
-          value={formData.diagnostico}
-          onChangeText={(value) => handleInputChange("diagnostico", value)}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-        {errors.diagnostico && (
-          <Text style={styles.errorText}>{errors.diagnostico}</Text>
-        )}
-      </View>
+        {/* Diagnóstico */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Diagnóstico *</Text>
+          <TextInput
+            style={[styles.textArea, errors.diagnostico && styles.inputError]}
+            placeholder="Ingrese el diagnóstico del paciente"
+            value={formData.diagnostico}
+            onChangeText={(value) => handleInputChange("diagnostico", value)}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          {errors.diagnostico && (
+            <Text style={styles.errorText}>{errors.diagnostico}</Text>
+          )}
+        </View>
 
-      {/* Tratamiento */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Tratamiento *</Text>
-        <TextInput
-          style={[styles.textArea, errors.tratamiento && styles.inputError]}
-          placeholder="Ingrese el tratamiento prescrito"
-          value={formData.tratamiento}
-          onChangeText={(value) => handleInputChange("tratamiento", value)}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-        {errors.tratamiento && (
-          <Text style={styles.errorText}>{errors.tratamiento}</Text>
-        )}
-      </View>
+        {/* Tratamiento */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Tratamiento *</Text>
+          <TextInput
+            style={[styles.textArea, errors.tratamiento && styles.inputError]}
+            placeholder="Ingrese el tratamiento prescrito"
+            value={formData.tratamiento}
+            onChangeText={(value) => handleInputChange("tratamiento", value)}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          {errors.tratamiento && (
+            <Text style={styles.errorText}>{errors.tratamiento}</Text>
+          )}
+        </View>
 
-      {/* Costo */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Costo de la Consulta *</Text>
-        <TextInput
-          style={[styles.input, errors.costo && styles.inputError]}
-          placeholder="0.00"
-          value={formData.costo}
-          onChangeText={(value) => handleInputChange("costo", value)}
-          keyboardType="numeric"
-        />
-        {errors.costo && <Text style={styles.errorText}>{errors.costo}</Text>}
-      </View>
+        {/* Costo */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Costo de la Consulta *</Text>
+          <TextInput
+            style={[styles.input, errors.costo && styles.inputError]}
+            placeholder="0.00"
+            value={formData.costo}
+            onChangeText={(value) => handleInputChange("costo", value)}
+            keyboardType="numeric"
+          />
+          {errors.costo && <Text style={styles.errorText}>{errors.costo}</Text>}
+        </View>
 
-      {/* Descuento */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Descuento</Text>
-        <TextInput
-          style={[styles.input, errors.descuento && styles.inputError]}
-          placeholder="0.00"
-          value={formData.descuento}
-          onChangeText={(value) => handleInputChange("descuento", value)}
-          keyboardType="numeric"
-        />
-        {errors.descuento && (
-          <Text style={styles.errorText}>{errors.descuento}</Text>
-        )}
-      </View>
+        {/* Descuento */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Descuento</Text>
+          <TextInput
+            style={[styles.input, errors.descuento && styles.inputError]}
+            placeholder="0.00"
+            value={formData.descuento}
+            onChangeText={(value) => handleInputChange("descuento", value)}
+            keyboardType="numeric"
+          />
+          {errors.descuento && (
+            <Text style={styles.errorText}>{errors.descuento}</Text>
+          )}
+        </View>
 
-      {/* Total a Pagar */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Total a Pagar</Text>
-        <TextInput
-          style={[styles.input, styles.totalInput]}
-          value={formData.total_pagar}
-          editable={false}
-          placeholder="0.00"
-        />
-      </View>
+        {/* Total a Pagar */}
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Total a Pagar</Text>
+          <TextInput
+            style={[styles.input, styles.totalInput]}
+            value={formData.total_pagar}
+            editable={false}
+            placeholder="0.00"
+          />
+        </View>
 
-      {/* Botones de Acción */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={handleVolver}>
-          <Text style={styles.backButtonText}>Volver</Text>
-        </TouchableOpacity>
+        {/* Botones de Acción */}
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.backButton} onPress={handleVolver}>
+            <Text style={styles.backButtonText}>Volver</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.completeButton}
-          onPress={handleCompletarCita}
-        >
-          <Text style={styles.completeButtonText}>Cita Completada</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={handleCompletarCita}
+          >
+            <Text style={styles.completeButtonText}>Cita Completada</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

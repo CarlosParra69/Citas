@@ -14,7 +14,7 @@ import { getCitas, deleteCita, updateCitaEstado } from "../../api/citas";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
-import { formatDate } from "../../utils/formatDate";
+import { formatDate, formatCitaDateTime } from "../../utils/formatDate";
 
 const GestionCitasScreen = ({ navigation }) => {
   const { user } = useAuthContext();
@@ -161,7 +161,9 @@ const GestionCitasScreen = ({ navigation }) => {
           <Text style={styles.medicoName}>
             Dr. {item.medico?.nombre} {item.medico?.apellido}
           </Text>
-          <Text style={styles.fechaHora}>{formatDate(item.fecha_hora)}</Text>
+          <Text style={styles.fechaHora}>
+            {formatCitaDateTime(item.fecha_hora)}
+          </Text>
           <Text style={styles.motivo}>{item.motivo_consulta}</Text>
         </View>
 

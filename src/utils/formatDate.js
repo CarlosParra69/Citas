@@ -7,6 +7,7 @@ export const formatDate = (date) => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   };
 
   return new Date(date).toLocaleDateString("es-ES", options);
@@ -30,9 +31,32 @@ export const formatTime = (date) => {
   const options = {
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   };
 
   return new Date(date).toLocaleTimeString("es-ES", options);
+};
+
+/**
+ * Formatea la fecha y hora de una cita específicamente
+ * @param {string|Date} date - La fecha de la cita
+ * @returns {string} - Fecha y hora formateada con AM/PM
+ */
+export const formatCitaDateTime = (date) => {
+  if (!date) return "";
+
+  const dateObj = new Date(date);
+  const options = {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  };
+
+  return dateObj.toLocaleDateString("es-ES", options);
 };
 
 /**

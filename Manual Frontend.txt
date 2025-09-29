@@ -1,0 +1,22 @@
+Creamos una carpeta Citas Eps
+
+Abrimos Carpeta Citas Eps
+
+Clonamos el repositorio backend: https://github.com/CarlosParra69/Citas.git
+
+Tener Git Instalado o en su defecto con Visual Studio Clonar Repositorio
+
+Abrimos PowerShell y usamos: git clone https://github.com/CarlosParra69/Citas.git
+
+Después cd Citas
+
+Después ejecutamos el comando para instalar dependencias 
+de react - native: npm install
+
+Después ejecutamos expo go: npx expo start
+
+Escaneamos el QR y entramos al aplicativo con 
+credenciales de super administrador:
+
+Correo: admin@citasmedicas.com 
+Contraseña: admin123

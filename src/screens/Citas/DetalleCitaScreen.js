@@ -15,7 +15,7 @@ import ApprovalModal from "../../components/ApprovalModal";
 import RejectionModal from "../../components/RejectionModal";
 import CancellationModal from "../../components/CancellationModal";
 import LoadingSpinner from "../../components/LoadingSpinner";
-import { formatDate } from "../../utils/formatDate";
+import { formatDate, formatCitaDateTime } from "../../utils/formatDate";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
 
@@ -229,7 +229,7 @@ const DetalleCitaScreen = ({ route, navigation }) => {
         )}
 
         <Text style={styles.label}>Fecha y Hora:</Text>
-        <Text style={styles.value}>{formatDate(cita.fecha_hora)}</Text>
+        <Text style={styles.value}>{formatCitaDateTime(cita.fecha_hora)}</Text>
 
         <Text style={styles.label}>Motivo de Consulta:</Text>
         <Text style={styles.value}>

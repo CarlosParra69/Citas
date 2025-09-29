@@ -7,6 +7,8 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthContext } from "../../context/AuthContext";
@@ -30,7 +32,7 @@ const CrearPacienteScreen = ({ navigation }) => {
   const styles = createStyles(colors);
 
   useEffect(() => {
-    if (user?.rol !== "superadmin") {
+    if (user?.rol !== "superadmin" && user?.rol !== "medico") {
       Alert.alert(
         "Acceso Denegado",
         "No tienes permisos para acceder a esta pantalla",
@@ -60,6 +62,7 @@ const CrearPacienteScreen = ({ navigation }) => {
     antecedentes_medicos: "",
     contacto_emergencia: "",
     telefono_emergencia: "",
+    activo: true,
     password: "",
     password_confirmation: "",
   });
@@ -309,8 +312,16 @@ const CrearPacienteScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+    >
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Crear Nuevo Paciente</Text>
         <Text style={styles.subtitle}>
           Completa la información del paciente
@@ -527,7 +538,7 @@ const CrearPacienteScreen = ({ navigation }) => {
           style={styles.submitButton}
         />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -133,7 +133,7 @@ const CitasHoyScreen = ({ navigation }) => {
           }
           rightContent={estadoBadge}
         />
-        {cita.estado === "programada" || cita.estado === "confirmada" ? (
+        {cita.estado === "confirmada" ? (
           <TouchableOpacity
             style={styles.atenderButton}
             onPress={() => handleAtenderPaciente(cita.id)}

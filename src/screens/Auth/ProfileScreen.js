@@ -221,6 +221,31 @@ const ProfileScreen = ({ navigation }) => {
     user?.name ||
     "Usuario";
 
+  // Obtener información específica según el rol del usuario
+  const getTelefono = () => {
+    if (user?.rol === "paciente" && user?.paciente?.telefono) {
+      return user.paciente.telefono;
+    }
+    if (user?.rol === "medico" && user?.medico?.telefono) {
+      return user.medico.telefono;
+    }
+    return user?.telefono || "No disponible";
+  };
+
+  const getEdad = () => {
+    if (user?.rol === "paciente" && user?.paciente?.edad) {
+      return `${user.paciente.edad} años`;
+    }
+    return "No disponible";
+  };
+
+  const getEps = () => {
+    if (user?.rol === "paciente" && user?.paciente?.eps) {
+      return user.paciente.eps;
+    }
+    return "No especificada";
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -298,21 +323,17 @@ const ProfileScreen = ({ navigation }) => {
 
           <View style={styles.infoRow}>
             <Text style={styles.label}>Teléfono:</Text>
-            <Text style={styles.value}>
-              {user?.telefono || "No disponible"}
-            </Text>
+            <Text style={styles.value}>{getTelefono()}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.label}>Edad:</Text>
-            <Text style={styles.value}>
-              {user?.edad ? `${user.edad} años` : "No disponible"}
-            </Text>
+            <Text style={styles.value}>{getEdad()}</Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.label}>EPS:</Text>
-            <Text style={styles.value}>{user?.eps || "No especificada"}</Text>
+            <Text style={styles.value}>{getEps()}</Text>
           </View>
 
           <View style={styles.infoRow}>

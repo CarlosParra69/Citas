@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Platform,
   Image,
+  KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useAuthContext } from "../../context/AuthContext";
@@ -613,206 +614,213 @@ const CrearMedicoScreen = ({ navigation, route }) => {
   }
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
     >
-      <Text style={styles.title}>
-        {isEditing ? "Editar Médico" : "Crear Nuevo Médico"}
-      </Text>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>
+          {isEditing ? "Editar Médico" : "Crear Nuevo Médico"}
+        </Text>
 
-      {/* Foto de Perfil */}
-      {!isEditing && (
-        <View style={styles.profileImageSection}>
-          <Text style={styles.sectionTitle}>Foto de Perfil</Text>
-          <TouchableOpacity
-            onPress={pickImage}
-            style={styles.avatarContainer}
-            disabled={uploadingImage}
-          >
-            {profileImage ? (
-              <Image
-                source={{ uri: profileImage }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <View style={[styles.avatar, { backgroundColor: colors.info }]}>
-                <Text style={[styles.avatarText, { color: colors.white }]}>
-                  👤
+        {/* Foto de Perfil */}
+        {!isEditing && (
+          <View style={styles.profileImageSection}>
+            <Text style={styles.sectionTitle}>Foto de Perfil</Text>
+            <TouchableOpacity
+              onPress={pickImage}
+              style={styles.avatarContainer}
+              disabled={uploadingImage}
+            >
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: colors.info }]}>
+                  <Text style={[styles.avatarText, { color: colors.white }]}>
+                    👤
+                  </Text>
+                </View>
+              )}
+              <View
+                style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
+              >
+                <Text style={[styles.cameraIconText, { color: colors.white }]}>
+                  📷
                 </Text>
               </View>
-            )}
-            <View
-              style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
-            >
-              <Text style={[styles.cameraIconText, { color: colors.white }]}>
-                📷
-              </Text>
-            </View>
-          </TouchableOpacity>
-          <Text style={[styles.profileImageHint, { color: colors.gray }]}>
-            Toca para {profileImage ? "cambiar" : "agregar"} foto de perfil
-          </Text>
-          {uploadingImage && (
-            <Text style={[styles.uploadingText, { color: colors.primary }]}>
-              Procesando imagen...
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Información Personal */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Información Personal</Text>
-
-        <InputField
-          label="Nombre *"
-          placeholder="Ingrese el nombre"
-          value={formData.nombre}
-          onChangeText={(value) => handleChange("nombre", value)}
-          error={errors.nombre}
-        />
-
-        <InputField
-          label="Apellido *"
-          placeholder="Ingrese el apellido"
-          value={formData.apellido}
-          onChangeText={(value) => handleChange("apellido", value)}
-          error={errors.apellido}
-        />
-
-        <InputField
-          label="Cédula *"
-          placeholder="Ingrese la cédula"
-          value={formData.cedula}
-          onChangeText={(value) => handleChange("cedula", value)}
-          keyboardType="numeric"
-          error={errors.cedula}
-        />
-
-        <InputField
-          label="Email *"
-          placeholder="Ingrese el email"
-          value={formData.email}
-          onChangeText={(value) => handleChange("email", value)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          error={errors.email}
-        />
-
-        {!isEditing && (
-          <>
-            <InputField
-              label="Contraseña *"
-              placeholder="Ingrese la contraseña"
-              value={formData.password}
-              onChangeText={(value) => handleChange("password", value)}
-              secureTextEntry
-              error={errors.password}
-            />
-
-            <InputField
-              label="Confirmar Contraseña *"
-              placeholder="Confirme la contraseña"
-              value={formData.password_confirmation}
-              onChangeText={(value) =>
-                handleChange("password_confirmation", value)
-              }
-              secureTextEntry
-              error={errors.password_confirmation}
-            />
-          </>
-        )}
-
-        <InputField
-          label="Teléfono *"
-          placeholder="Ingrese el teléfono"
-          value={formData.telefono}
-          onChangeText={(value) => handleChange("telefono", value)}
-          keyboardType="phone-pad"
-          error={errors.telefono}
-        />
-      </View>
-
-      {/* Información Profesional */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Información Profesional</Text>
-
-        <Text style={styles.label}>Especialidad</Text>
-        <View style={styles.especialidadesContainer}>
-          {especialidades.map((especialidad) => (
-            <TouchableOpacity
-              key={especialidad.id}
-              style={[
-                styles.especialidadChip,
-                formData.especialidad_id === especialidad.id &&
-                  styles.selectedEspecialidadChip,
-              ]}
-              onPress={() => handleChange("especialidad_id", especialidad.id)}
-            >
-              <Text
-                style={[
-                  styles.especialidadChipText,
-                  formData.especialidad_id === especialidad.id &&
-                    styles.selectedEspecialidadChipText,
-                ]}
-              >
-                {especialidad.nombre}
-              </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-        {errors.especialidad_id && (
-          <Text style={styles.errorText}>{errors.especialidad_id}</Text>
+            <Text style={[styles.profileImageHint, { color: colors.gray }]}>
+              Toca para {profileImage ? "cambiar" : "agregar"} foto de perfil
+            </Text>
+            {uploadingImage && (
+              <Text style={[styles.uploadingText, { color: colors.primary }]}>
+                Procesando imagen...
+              </Text>
+            )}
+          </View>
         )}
 
-        <InputField
-          label="Registro Médico *"
-          placeholder="Ingrese el registro médico"
-          value={formData.registro_medico}
-          onChangeText={(value) => handleChange("registro_medico", value)}
-          error={errors.registro_medico}
-        />
+        {/* Información Personal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Información Personal</Text>
 
-        <InputField
-          label="Tarifa de Consulta"
-          placeholder="Ingrese la tarifa de consulta (opcional)"
-          value={formData.tarifa_consulta}
-          onChangeText={(value) => handleChange("tarifa_consulta", value)}
-          keyboardType="numeric"
-          error={errors.tarifa_consulta}
-        />
+          <InputField
+            label="Nombre *"
+            placeholder="Ingrese el nombre"
+            value={formData.nombre}
+            onChangeText={(value) => handleChange("nombre", value)}
+            error={errors.nombre}
+          />
 
-        <InputField
-          label="Biografía"
-          placeholder="Ingrese una breve biografía del médico (opcional)"
-          value={formData.biografia}
-          onChangeText={(value) => handleChange("biografia", value)}
-          multiline
-          numberOfLines={4}
-          error={errors.biografia}
-        />
-      </View>
+          <InputField
+            label="Apellido *"
+            placeholder="Ingrese el apellido"
+            value={formData.apellido}
+            onChangeText={(value) => handleChange("apellido", value)}
+            error={errors.apellido}
+          />
 
-      {/* Horarios de Atención */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Horarios de Atención</Text>
-        <HorariosSelector
-          horarios={formData.horarios_atencion}
-          onHorariosChange={handleHorariosChange}
-          error={errors.horarios_atencion}
-          colors={colors}
-        />
-      </View>
+          <InputField
+            label="Cédula *"
+            placeholder="Ingrese la cédula"
+            value={formData.cedula}
+            onChangeText={(value) => handleChange("cedula", value)}
+            keyboardType="numeric"
+            error={errors.cedula}
+          />
 
-      <ButtonPrimary
-        title={isEditing ? "Actualizar Médico" : "Crear Médico"}
-        onPress={handleSubmit}
-        disabled={loading}
-        loading={loading}
-        style={styles.submitButton}
-      />
-    </ScrollView>
+          <InputField
+            label="Email *"
+            placeholder="Ingrese el email"
+            value={formData.email}
+            onChangeText={(value) => handleChange("email", value)}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            error={errors.email}
+          />
+
+          {!isEditing && (
+            <>
+              <InputField
+                label="Contraseña *"
+                placeholder="Ingrese la contraseña"
+                value={formData.password}
+                onChangeText={(value) => handleChange("password", value)}
+                secureTextEntry
+                error={errors.password}
+              />
+
+              <InputField
+                label="Confirmar Contraseña *"
+                placeholder="Confirme la contraseña"
+                value={formData.password_confirmation}
+                onChangeText={(value) =>
+                  handleChange("password_confirmation", value)
+                }
+                secureTextEntry
+                error={errors.password_confirmation}
+              />
+            </>
+          )}
+
+          <InputField
+            label="Teléfono *"
+            placeholder="Ingrese el teléfono"
+            value={formData.telefono}
+            onChangeText={(value) => handleChange("telefono", value)}
+            keyboardType="phone-pad"
+            error={errors.telefono}
+          />
+        </View>
+
+        {/* Información Profesional */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Información Profesional</Text>
+
+          <Text style={styles.label}>Especialidad</Text>
+          <View style={styles.especialidadesContainer}>
+            {especialidades.map((especialidad) => (
+              <TouchableOpacity
+                key={especialidad.id}
+                style={[
+                  styles.especialidadChip,
+                  formData.especialidad_id === especialidad.id &&
+                    styles.selectedEspecialidadChip,
+                ]}
+                onPress={() => handleChange("especialidad_id", especialidad.id)}
+              >
+                <Text
+                  style={[
+                    styles.especialidadChipText,
+                    formData.especialidad_id === especialidad.id &&
+                      styles.selectedEspecialidadChipText,
+                  ]}
+                >
+                  {especialidad.nombre}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {errors.especialidad_id && (
+            <Text style={styles.errorText}>{errors.especialidad_id}</Text>
+          )}
+
+          <InputField
+            label="Registro Médico *"
+            placeholder="Ingrese el registro médico"
+            value={formData.registro_medico}
+            onChangeText={(value) => handleChange("registro_medico", value)}
+            error={errors.registro_medico}
+          />
+
+          <InputField
+            label="Tarifa de Consulta"
+            placeholder="Ingrese la tarifa de consulta (opcional)"
+            value={formData.tarifa_consulta}
+            onChangeText={(value) => handleChange("tarifa_consulta", value)}
+            keyboardType="numeric"
+            error={errors.tarifa_consulta}
+          />
+
+          <InputField
+            label="Biografía"
+            placeholder="Ingrese una breve biografía del médico (opcional)"
+            value={formData.biografia}
+            onChangeText={(value) => handleChange("biografia", value)}
+            multiline
+            numberOfLines={4}
+            error={errors.biografia}
+          />
+        </View>
+
+        {/* Horarios de Atención */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Horarios de Atención</Text>
+          <HorariosSelector
+            horarios={formData.horarios_atencion}
+            onHorariosChange={handleHorariosChange}
+            error={errors.horarios_atencion}
+            colors={colors}
+          />
+        </View>
+
+        <ButtonPrimary
+          title={isEditing ? "Actualizar Médico" : "Crear Médico"}
+          onPress={handleSubmit}
+          disabled={loading}
+          loading={loading}
+          style={styles.submitButton}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 

@@ -6,15 +6,20 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import useAuth from "../../hooks/useAuth";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import globalStyles from "../../styles/globalStyles";
 import { useThemeColors } from "../../utils/themeColors";
+import { useTheme } from "../../context/ThemeContext";
 
 const LoginScreen = ({ navigation }) => {
   const colors = useThemeColors();
+  const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,40 +70,54 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Image
-        source={require("../../assets/svg/MediApp_logo.png")}
-        style={styles.logo}
-        resizeMode="contain"
-      />
-      <Text style={styles.hospitalTitle}>MediApp</Text>
-      <Text style={styles.subtitle}>Gestión de Citas Médicas</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Image
+          source={
+            theme === "dark"
+              ? require("../../assets/svg/MediApp_logo_dark.png")
+              : require("../../assets/svg/MediApp_logo.png")
+          }
+          style={styles.logo}
+          resizeMode="contain"
+        />
+        <Text style={styles.hospitalTitle}>MediApp</Text>
+        <Text style={styles.subtitle}>Gestión de Citas Médicas</Text>
 
-      <InputField
-        placeholder="Correo electrónico"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        error={emailError}
-      />
+        <InputField
+          placeholder="Correo electrónico"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          error={emailError}
+        />
 
-      <InputField
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        keyboardType="default"
-        secureTextEntry
-        autoCapitalize="none"
-        error={passwordError}
-      />
+        <InputField
+          placeholder="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          keyboardType="default"
+          secureTextEntry
+          autoCapitalize="none"
+          error={passwordError}
+        />
 
-      <ButtonPrimary
-        title="Iniciar Sesión"
-        onPress={handleLogin}
-        disabled={loading}
-      />
-    </View>
+        <ButtonPrimary
+          title="Iniciar Sesión"
+          onPress={handleLogin}
+          disabled={loading}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -106,9 +125,12 @@ const createStyles = (colors) =>
   StyleSheet.create({
     container: {
       flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContainer: {
+      flexGrow: 1,
       padding: 20,
       justifyContent: "center",
-      backgroundColor: colors.background,
     },
     logo: {
       width: 120,

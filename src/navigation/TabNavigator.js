@@ -69,9 +69,6 @@ export default function TabNavigator() {
         },
       })}
     >
-      {/* Todas las pestañas comunes */}
-      <Tab.Screen name="Citas" component={CitasNavigator} />
-      <Tab.Screen name="Médicos" component={MedicosNavigator} />
       {/* Pestañas específicas por rol */}
       {isSuperadmin && (
         <>
@@ -79,7 +76,6 @@ export default function TabNavigator() {
             name="Especialidades"
             component={EspecialidadesNavigator}
           />
-          <Tab.Screen name="Pacientes" component={PacientesNavigator} />
           <Tab.Screen
             name="Administración"
             component={AdministracionNavigator}
@@ -90,6 +86,7 @@ export default function TabNavigator() {
 
       {isMedico && (
         <>
+          <Tab.Screen name="Citas" component={CitasNavigator} />
           <Tab.Screen name="Pacientes" component={PacientesNavigator} />
           <Tab.Screen
             name="Especialidades"
@@ -99,10 +96,13 @@ export default function TabNavigator() {
         </>
       )}
 
-      <Tab.Screen name="Perfil" component={PerfilNavigator} />
       {isPaciente && (
-        <>{/* Los pacientes solo tienen acceso a Citas, Médicos y Perfil */}</>
+        <>
+          <Tab.Screen name="Citas" component={CitasNavigator} />
+          <Tab.Screen name="Médicos" component={MedicosNavigator} />
+        </>
       )}
+      <Tab.Screen name="Perfil" component={PerfilNavigator} />
     </Tab.Navigator>
   );
 }

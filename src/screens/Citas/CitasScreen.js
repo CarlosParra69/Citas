@@ -10,7 +10,7 @@ import {
 import Loader from "../../components/Loader";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import CardItem from "../../components/CardItem";
-import { formatDate } from "../../utils/formatDate";
+import { formatDate, formatCitaDateTime } from "../../utils/formatDate";
 import { useCitas } from "../../context/CitasContext";
 import { useThemeColors } from "../../utils/themeColors";
 import { useAuthContext } from "../../context/AuthContext";
@@ -90,7 +90,7 @@ const CitasScreen = ({ navigation }) => {
       <CardItem
         key={cita.id}
         title={medicoNombre}
-        subtitle={formatDate(cita.fecha_hora)}
+        subtitle={formatCitaDateTime(cita.fecha_hora)}
         onPress={() =>
           navigation.navigate("DetalleCitaScreen", { citaId: cita.id })
         }
@@ -106,11 +106,6 @@ const CitasScreen = ({ navigation }) => {
       <Text style={styles.title}>Mis Citas Médicas</Text>
 
       <View style={styles.buttonContainer}>
-        <ButtonPrimary
-          title="Nueva Cita"
-          onPress={() => navigation.navigate("CrearCitaScreen")}
-        />
-
         {user?.rol === "medico" && (
           <>
             <ButtonPrimary
@@ -123,12 +118,17 @@ const CitasScreen = ({ navigation }) => {
             />
           </>
         )}
-
         {user?.rol === "paciente" && (
-          <ButtonPrimary
-            title="Confirmar Cita"
-            onPress={() => navigation.navigate("ConfirmarCitaScreen")}
-          />
+          <>
+            <ButtonPrimary
+              title="Nueva Cita"
+              onPress={() => navigation.navigate("CrearCitaScreen")}
+            />
+            <ButtonPrimary
+              title="Confirmar Cita"
+              onPress={() => navigation.navigate("ConfirmarCitaScreen")}
+            />
+          </>
         )}
       </View>
 

@@ -15,7 +15,11 @@ import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import RejectionModal from "./RejectionModal";
 import { useThemeColors } from "../../utils/themeColors";
-import { formatDate, formatTime } from "../../utils/formatDate";
+import {
+  formatDate,
+  formatTime,
+  formatCitaDateTime,
+} from "../../utils/formatDate";
 
 const CitasPendientesScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -131,7 +135,7 @@ const CitasPendientesScreen = ({ navigation }) => {
             {item.paciente?.apellido || "Sin apellido"}
           </Text>
           <Text style={styles.citaDate}>
-            {formatDate(item.fecha_hora)} - {formatTime(item.fecha_hora)}
+            {formatCitaDateTime(item.fecha_hora)}
           </Text>
         </View>
 
@@ -286,14 +290,14 @@ const createStyles = (colors) =>
       backgroundColor: colors.error,
     },
     rejectButtonText: {
-      color: "white",
+      color: colors.white || "#FFFFFF",
       fontWeight: "bold",
     },
     approveButton: {
       backgroundColor: colors.success,
     },
     approveButtonText: {
-      color: "white",
+      color: colors.white || "#FFFFFF",
       fontWeight: "bold",
     },
     errorText: {

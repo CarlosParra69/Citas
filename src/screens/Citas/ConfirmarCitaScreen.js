@@ -13,7 +13,11 @@ import { useCitas } from "../../context/CitasContext";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import CancellationModal from "../../components/CancellationModal";
 import { useThemeColors } from "../../utils/themeColors";
-import { formatDate, formatTime } from "../../utils/formatDate";
+import {
+  formatDate,
+  formatTime,
+  formatCitaDateTime,
+} from "../../utils/formatDate";
 
 const ConfirmarCitaScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -114,7 +118,7 @@ const ConfirmarCitaScreen = ({ navigation }) => {
           Dr. {item.medico?.nombre} {item.medico?.apellido}
         </Text>
         <Text style={styles.citaDate}>
-          {formatDate(item.fecha_hora)} - {formatTime(item.fecha_hora)}
+          {formatCitaDateTime(item.fecha_hora)}
         </Text>
       </View>
 
@@ -297,14 +301,14 @@ const createStyles = (colors) =>
       backgroundColor: colors.error,
     },
     cancelButtonText: {
-      color: "white",
+      color: colors.white || "#FFFFFF",
       fontWeight: "bold",
     },
     confirmButton: {
       backgroundColor: colors.success,
     },
     confirmButtonText: {
-      color: "white",
+      color: colors.white || "#FFFFFF",
       fontWeight: "bold",
     },
     errorText: {

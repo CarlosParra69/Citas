@@ -6,6 +6,8 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -261,176 +263,186 @@ const CrearCitaScreen = ({ navigation }) => {
   const isMedico = user?.rol === "medico";
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
     >
-      <Text style={styles.title}>
-        {isMedico ? "Crear Cita Médica" : "Nueva Cita Médica"}
-      </Text>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>
+          {isMedico ? "Crear Cita Médica" : "Nueva Cita Médica"}
+        </Text>
 
-      {/* Selector de Paciente (solo para médicos) */}
-      {isMedico && (
-        <>
-          <Text style={styles.label}>Paciente *</Text>
-          <View style={styles.pickerContainer}>
-            {pacientes.length === 0 ? (
-              <Text style={styles.noDataText}>
-                No hay pacientes disponibles
-              </Text>
-            ) : (
-              pacientes.map((paciente) => (
-                <TouchableOpacity
-                  key={paciente.id}
-                  style={[
-                    styles.optionButton,
-                    formData.paciente_id === paciente.id.toString() &&
-                      styles.selectedOption,
-                  ]}
-                  onPress={() =>
-                    handleChange("paciente_id", paciente.id.toString())
-                  }
-                >
-                  <Text
+        {/* Selector de Paciente (solo para médicos) */}
+        {isMedico && (
+          <>
+            <Text style={styles.label}>Paciente *</Text>
+            <View style={styles.pickerContainer}>
+              {pacientes.length === 0 ? (
+                <Text style={styles.noDataText}>
+                  No hay pacientes disponibles
+                </Text>
+              ) : (
+                pacientes.map((paciente) => (
+                  <TouchableOpacity
+                    key={paciente.id}
                     style={[
-                      styles.optionText,
+                      styles.optionButton,
                       formData.paciente_id === paciente.id.toString() &&
-                        styles.selectedOptionText,
+                        styles.selectedOption,
                     ]}
+                    onPress={() =>
+                      handleChange("paciente_id", paciente.id.toString())
+                    }
                   >
-                    {paciente.nombre} {paciente.apellido}
-                  </Text>
-                  <Text style={styles.patientDetails}>
-                    {paciente.cedula} - {paciente.email}
-                  </Text>
-                </TouchableOpacity>
-              ))
+                    <Text
+                      style={[
+                        styles.optionText,
+                        formData.paciente_id === paciente.id.toString() &&
+                          styles.selectedOptionText,
+                      ]}
+                    >
+                      {paciente.nombre} {paciente.apellido}
+                    </Text>
+                    <Text style={styles.patientDetails}>
+                      {paciente.cedula} - {paciente.email}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+            {errors.paciente_id && (
+              <Text style={styles.errorText}>{errors.paciente_id}</Text>
             )}
-          </View>
-          {errors.paciente_id && (
-            <Text style={styles.errorText}>{errors.paciente_id}</Text>
-          )}
-        </>
-      )}
+          </>
+        )}
 
-      {/* Selector de Especialidad */}
-      <Text style={styles.label}>Especialidad</Text>
-      <View style={styles.pickerContainer}>
-        {especialidades.map((especialidad) => (
-          <TouchableOpacity
-            key={especialidad.id}
-            style={[
-              styles.optionButton,
-              selectedEspecialidad === especialidad.id && styles.selectedOption,
-            ]}
-            onPress={() => setSelectedEspecialidad(especialidad.id)}
-          >
-            <Text
+        {/* Selector de Especialidad */}
+        <Text style={styles.label}>Especialidad</Text>
+        <View style={styles.pickerContainer}>
+          {especialidades.map((especialidad) => (
+            <TouchableOpacity
+              key={especialidad.id}
               style={[
-                styles.optionText,
+                styles.optionButton,
                 selectedEspecialidad === especialidad.id &&
-                  styles.selectedOptionText,
+                  styles.selectedOption,
               ]}
+              onPress={() => setSelectedEspecialidad(especialidad.id)}
             >
-              {especialidad.nombre}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-      {errors.especialidad && (
-        <Text style={styles.errorText}>{errors.especialidad}</Text>
-      )}
+              <Text
+                style={[
+                  styles.optionText,
+                  selectedEspecialidad === especialidad.id &&
+                    styles.selectedOptionText,
+                ]}
+              >
+                {especialidad.nombre}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        {errors.especialidad && (
+          <Text style={styles.errorText}>{errors.especialidad}</Text>
+        )}
 
-      {/* Selector de Médico */}
-      {selectedEspecialidad && (
-        <>
-          <Text style={styles.label}>Médico</Text>
-          <View style={styles.pickerContainer}>
-            {medicos.length === 0 ? (
-              <Text style={styles.noDataText}>No hay médicos disponibles</Text>
-            ) : (
-              medicos.map((medico) => (
-                <TouchableOpacity
-                  key={medico.id}
-                  style={[
-                    styles.optionButton,
-                    formData.medico_id === medico.id.toString() &&
-                      styles.selectedOption,
-                  ]}
-                  onPress={() =>
-                    handleChange("medico_id", medico.id.toString())
-                  }
-                >
-                  <Text
+        {/* Selector de Médico */}
+        {selectedEspecialidad && (
+          <>
+            <Text style={styles.label}>Médico</Text>
+            <View style={styles.pickerContainer}>
+              {medicos.length === 0 ? (
+                <Text style={styles.noDataText}>
+                  No hay médicos disponibles
+                </Text>
+              ) : (
+                medicos.map((medico) => (
+                  <TouchableOpacity
+                    key={medico.id}
                     style={[
-                      styles.optionText,
+                      styles.optionButton,
                       formData.medico_id === medico.id.toString() &&
-                        styles.selectedOptionText,
+                        styles.selectedOption,
                     ]}
+                    onPress={() =>
+                      handleChange("medico_id", medico.id.toString())
+                    }
                   >
-                    Dr. {medico.nombre} {medico.apellido}
-                  </Text>
-                </TouchableOpacity>
-              ))
+                    <Text
+                      style={[
+                        styles.optionText,
+                        formData.medico_id === medico.id.toString() &&
+                          styles.selectedOptionText,
+                      ]}
+                    >
+                      Dr. {medico.nombre} {medico.apellido}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+            {errors.medico_id && (
+              <Text style={styles.errorText}>{errors.medico_id}</Text>
             )}
-          </View>
-          {errors.medico_id && (
-            <Text style={styles.errorText}>{errors.medico_id}</Text>
-          )}
-        </>
-      )}
+          </>
+        )}
 
-      {/* Calendario para seleccionar fecha y hora */}
-      <Text style={styles.label}>Fecha y Hora</Text>
-      <MiniCalendario
-        selectedDate={selectedDateTime}
-        onDateSelect={handleDateSelect}
-        medicoId={formData.medico_id}
-        onAvailabilityCheck={(dateTimeString) => {
-          if (formData.medico_id) {
-            checkAvailability(dateTimeString);
-          }
-        }}
-        isAvailable={isAvailable}
-        checkingAvailability={checkingAvailability}
-        onAvailabilityResult={(available) => {
-          setIsAvailable(available);
-          setAvailabilityChecked(true);
-        }}
-      />
-      {errors.fecha_hora && (
-        <Text style={styles.errorText}>{errors.fecha_hora}</Text>
-      )}
+        {/* Calendario para seleccionar fecha y hora */}
+        <Text style={styles.label}>Fecha y Hora</Text>
+        <MiniCalendario
+          selectedDate={selectedDateTime}
+          onDateSelect={handleDateSelect}
+          medicoId={formData.medico_id}
+          onAvailabilityCheck={(dateTimeString) => {
+            if (formData.medico_id) {
+              checkAvailability(dateTimeString);
+            }
+          }}
+          isAvailable={isAvailable}
+          checkingAvailability={checkingAvailability}
+          onAvailabilityResult={(available) => {
+            setIsAvailable(available);
+            setAvailabilityChecked(true);
+          }}
+        />
+        {errors.fecha_hora && (
+          <Text style={styles.errorText}>{errors.fecha_hora}</Text>
+        )}
 
-      {/* Motivo de Consulta */}
-      <InputField
-        label="Motivo de Consulta *"
-        placeholder="Describe el motivo de tu consulta"
-        value={formData.motivo_consulta}
-        onChangeText={(value) => handleChange("motivo_consulta", value)}
-        multiline
-        numberOfLines={3}
-        error={errors.motivo_consulta}
-      />
+        {/* Motivo de Consulta */}
+        <InputField
+          label="Motivo de Consulta *"
+          placeholder="Describe el motivo de tu consulta"
+          value={formData.motivo_consulta}
+          onChangeText={(value) => handleChange("motivo_consulta", value)}
+          multiline
+          numberOfLines={3}
+          error={errors.motivo_consulta}
+        />
 
-      {/* Observaciones */}
-      <InputField
-        label="Observaciones (Opcional)"
-        placeholder="Información adicional"
-        value={formData.observaciones}
-        onChangeText={(value) => handleChange("observaciones", value)}
-        multiline
-        numberOfLines={2}
-        error={errors.observaciones}
-      />
+        {/* Observaciones */}
+        <InputField
+          label="Observaciones (Opcional)"
+          placeholder="Información adicional"
+          value={formData.observaciones}
+          onChangeText={(value) => handleChange("observaciones", value)}
+          multiline
+          numberOfLines={2}
+          error={errors.observaciones}
+        />
 
-      <ButtonPrimary
-        title="Crear Cita"
-        onPress={handleSubmit}
-        disabled={loading}
-        loading={loading}
-      />
-    </ScrollView>
+        <ButtonPrimary
+          title="Crear Cita"
+          onPress={handleSubmit}
+          disabled={loading}
+          loading={loading}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
