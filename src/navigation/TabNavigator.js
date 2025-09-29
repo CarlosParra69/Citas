@@ -13,8 +13,19 @@ import { useAuthContext } from "../context/AuthContext";
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const colors = useThemeColors();
-  const { user } = useAuthContext();
+  let colors, user;
+
+  try {
+    colors = useThemeColors();
+    user = useAuthContext()?.user;
+  } catch (error) {
+    console.error("Error in TabNavigator contexts:", error);
+    colors = {
+      primary: "#FF6B35",
+      gray: "#8E8E93",
+    };
+    user = null;
+  }
   const isSuperadmin = user?.rol === "superadmin";
   const isPaciente = user?.rol === "paciente";
   const isMedico = user?.rol === "medico";
@@ -46,17 +57,21 @@ export default function TabNavigator() {
       screenOptions={({ route }) => ({
         tabBarIcon: (props) => getTabBarIcon({ ...props, route }),
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.gray,
+        tabBarInactiveTintColor: colors.textSecondary || colors.gray,
         headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.primary,
+          borderTopColor: colors.border,
+        },
         tabBarLabelStyle: {
           fontSize: 10,
+          color: colors.white,
         },
       })}
     >
       {/* Todas las pestañas comunes */}
       <Tab.Screen name="Citas" component={CitasNavigator} />
       <Tab.Screen name="Médicos" component={MedicosNavigator} />
-
       {/* Pestañas específicas por rol */}
       {isSuperadmin && (
         <>
@@ -75,6 +90,7 @@ export default function TabNavigator() {
 
       {isMedico && (
         <>
+          <Tab.Screen name="Pacientes" component={PacientesNavigator} />
           <Tab.Screen
             name="Especialidades"
             component={EspecialidadesNavigator}
@@ -82,6 +98,7 @@ export default function TabNavigator() {
           <Tab.Screen name="Reportes" component={ReportesNavigator} />
         </>
       )}
+
       <Tab.Screen name="Perfil" component={PerfilNavigator} />
       {isPaciente && (
         <>{/* Los pacientes solo tienen acceso a Citas, Médicos y Perfil */}</>

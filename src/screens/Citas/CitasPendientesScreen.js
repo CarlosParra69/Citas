@@ -8,8 +8,8 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { AuthContext } from "../../context/AuthContext";
-import { CitasContext } from "../../context/CitasContext";
+import { useAuthContext } from "../../context/AuthContext";
+import { useCitas } from "../../context/CitasContext";
 import CardItem from "../../components/CardItem";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -19,37 +19,70 @@ import { formatDate, formatTime } from "../../utils/formatDate";
 
 const CitasPendientesScreen = ({ navigation }) => {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
-  const { user } = useContext(AuthContext);
-  const {
-    loading,
-    error,
-    fetchCitasPendientes,
-    aprobarCitaPendiente,
-    rechazarCitaPendiente,
-  } = useContext(CitasContext);
-  const [citasPendientes, setCitasPendientes] = useState([]);
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const { user } = useAuthContext();
+  const citasContext = useCitas();
+
+  // Fallback para colores si es necesario
+  const safeColors = colors || {
+    background: "#F9F9F9",
+    primary: "#FF6B35",
+    text: "#1C1C1E",
+    error: "#FF3B30",
+    gray: "#8E8E93",
+    white: "#FFFFFF",
+    border: "#C6C6C8",
+    success: "#34C759",
+    textSecondary: "#8E8E93",
+  };
+
+  // Usar el estado del contexto en lugar del estado local
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCitaId, setSelectedCitaId] = useState(null);
 
+  // Verificar si el usuario está disponible
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Usuario no autenticado</Text>
+      </View>
+    );
+  }
+
+  const {
+    loading = false,
+    error = null,
+    citasPendientes: contextCitasPendientes = [],
+    fetchCitasPendientes = async () => [],
+    aprobarCitaPendiente = async () => {},
+    rechazarCitaPendiente = async () => {},
+  } = citasContext || {};
+
   useEffect(() => {
-    loadCitasPendientes();
-  }, []);
+    if (user?.medico_id) {
+      fetchCitasPendientes(user.medico_id);
+    }
+  }, [user]);
 
   const loadCitasPendientes = async () => {
     try {
-      const citas = await fetchCitasPendientes(user.medico_id);
-      setCitasPendientes(citas || []);
+      if (!user?.medico_id) {
+        Alert.alert("Error", "Información de usuario no disponible");
+        return;
+      }
+
+      await fetchCitasPendientes(user.medico_id);
     } catch (error) {
-      console.error("Error loading pending appointments:", error);
       Alert.alert("Error", "No se pudieron cargar las citas pendientes");
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadCitasPendientes();
+    if (user?.medico_id) {
+      await fetchCitasPendientes(user.medico_id);
+    }
     setRefreshing(false);
   };
 
@@ -65,7 +98,7 @@ const CitasPendientesScreen = ({ navigation }) => {
             try {
               await aprobarCitaPendiente(citaId);
               Alert.alert("Éxito", "Cita aprobada correctamente");
-              loadCitasPendientes(); // Recargar la lista
+              // El contexto se actualiza automáticamente
             } catch (error) {
               Alert.alert("Error", "No se pudo aprobar la cita");
             }
@@ -86,43 +119,48 @@ const CitasPendientesScreen = ({ navigation }) => {
   };
 
   const handleRejectionSuccess = () => {
-    loadCitasPendientes();
+    // El contexto se actualiza automáticamente
   };
 
-  const renderCitaItem = ({ item }) => (
-    <CardItem style={styles.citaCard}>
-      <View style={styles.citaHeader}>
-        <Text style={styles.pacienteName}>
-          {item.paciente?.nombre} {item.paciente?.apellido}
+  const renderCitaItem = ({ item }) => {
+    return (
+      <View style={styles.citaCard}>
+        <View style={styles.citaHeader}>
+          <Text style={styles.pacienteName}>
+            {item.paciente?.nombre || "Sin nombre"}{" "}
+            {item.paciente?.apellido || "Sin apellido"}
+          </Text>
+          <Text style={styles.citaDate}>
+            {formatDate(item.fecha_hora)} - {formatTime(item.fecha_hora)}
+          </Text>
+        </View>
+
+        <Text style={styles.motivoConsulta}>
+          {item.motivo_consulta || "Sin motivo"}
         </Text>
-        <Text style={styles.citaDate}>
-          {formatDate(item.fecha_hora)} - {formatTime(item.fecha_hora)}
-        </Text>
+
+        {item.observaciones && (
+          <Text style={styles.observaciones}>{item.observaciones}</Text>
+        )}
+
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.rejectButton]}
+            onPress={() => handleReject(item.id)}
+          >
+            <Text style={styles.rejectButtonText}>Rechazar Cita</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.approveButton]}
+            onPress={() => handleApprove(item.id)}
+          >
+            <Text style={styles.approveButtonText}>Aprobar Cita</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <Text style={styles.motivoConsulta}>{item.motivo_consulta}</Text>
-
-      {item.observaciones && (
-        <Text style={styles.observaciones}>{item.observaciones}</Text>
-      )}
-
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.rejectButton]}
-          onPress={() => handleReject(item.id)}
-        >
-          <Text style={styles.rejectButtonText}>Rechazar</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.approveButton]}
-          onPress={() => handleApprove(item.id)}
-        >
-          <Text style={styles.approveButtonText}>Aprobar</Text>
-        </TouchableOpacity>
-      </View>
-    </CardItem>
-  );
+    );
+  };
 
   if (loading && !refreshing) {
     return <LoadingSpinner />;
@@ -132,7 +170,7 @@ const CitasPendientesScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Citas Pendientes</Text>
 
-      {citasPendientes.length === 0 ? (
+      {(contextCitasPendientes?.length || 0) === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
             No tienes citas pendientes de aprobación
@@ -140,7 +178,7 @@ const CitasPendientesScreen = ({ navigation }) => {
         </View>
       ) : (
         <FlatList
-          data={citasPendientes}
+          data={contextCitasPendientes || []}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderCitaItem}
           refreshControl={
@@ -150,12 +188,15 @@ const CitasPendientesScreen = ({ navigation }) => {
         />
       )}
 
-      <RejectionModal
-        visible={modalVisible}
-        onClose={handleModalClose}
-        citaId={selectedCitaId}
-        onReject={handleRejectionSuccess}
-      />
+      {/* Renderizar modal solo si está visible y tenemos los datos necesarios */}
+      {modalVisible && selectedCitaId && (
+        <RejectionModal
+          visible={modalVisible}
+          onClose={handleModalClose}
+          citaId={selectedCitaId}
+          onReject={handleRejectionSuccess}
+        />
+      )}
     </View>
   );
 };
@@ -171,7 +212,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 20,
       textAlign: "center",
     },
@@ -189,7 +230,21 @@ const createStyles = (colors) =>
       paddingBottom: 20,
     },
     citaCard: {
-      marginBottom: 12,
+      backgroundColor: colors.card || colors.surface,
+      marginHorizontal: 16,
+      marginVertical: 4,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     citaHeader: {
       marginBottom: 8,
@@ -240,6 +295,12 @@ const createStyles = (colors) =>
     approveButtonText: {
       color: "white",
       fontWeight: "bold",
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.error,
+      textAlign: "center",
+      marginTop: 20,
     },
   });
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuthContext } from "../context/AuthContext";
 import { useCitas } from "../context/CitasContext";
+import { useThemeColors } from "../utils/themeColors";
 import {
   dashboardMedico,
   dashboardPaciente,
@@ -14,8 +15,21 @@ const ROLES = {
 };
 
 export const useRoleBasedData = () => {
-  const { user } = useAuthContext();
-  const { fetchCitasPendientes, citasPendientes } = useCitas();
+  let user, citasContext;
+
+  try {
+    user = useAuthContext()?.user;
+    citasContext = useCitas();
+  } catch (error) {
+    console.error("Error in useRoleBasedData contexts:", error);
+    user = null;
+    citasContext = {
+      fetchCitasPendientes: async () => [],
+      citasPendientes: [],
+    };
+  }
+
+  const { fetchCitasPendientes, citasPendientes } = citasContext;
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(false);
 

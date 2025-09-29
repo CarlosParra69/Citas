@@ -19,6 +19,7 @@ export default function MedicosNavigator() {
         headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: "bold",
+          color: colors.white,
         },
       }}
     >

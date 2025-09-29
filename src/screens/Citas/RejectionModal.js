@@ -7,17 +7,47 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { CitasContext } from "../../context/CitasContext";
+import { useCitas } from "../../context/CitasContext";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
 
 const RejectionModal = ({ visible, onClose, citaId, onReject }) => {
-  const colors = useThemeColors();
-  const styles = createStyles(colors);
-  const { rechazarCitaPendiente, loading } = useContext(CitasContext);
+  let colors, citasContext;
+
+  try {
+    colors = useThemeColors();
+    citasContext = useCitas();
+  } catch (error) {
+    console.error("Error in RejectionModal contexts:", error);
+    return null; // No renderizar si hay error de contexto
+  }
+
+  const safeColors = colors || {
+    background: "#F9F9F9",
+    primary: "#FF6B35",
+    text: "#1C1C1E",
+    error: "#FF3B30",
+    gray: "#8E8E93",
+    white: "#FFFFFF",
+    border: "#C6C6C8",
+    secondary: "#FF8C42",
+  };
+
+  const styles = React.useMemo(() => createStyles(safeColors), [safeColors]);
+
+  const { rechazarCitaPendiente, loading } = citasContext || {
+    rechazarCitaPendiente: async () => {},
+    loading: false,
+  };
+
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [error, setError] = useState("");
+
+  // Verificar si los colores están disponibles
+  if (!colors) {
+    return null;
+  }
 
   const handleReject = async () => {
     if (!motivoRechazo.trim()) {
@@ -42,6 +72,11 @@ const RejectionModal = ({ visible, onClose, citaId, onReject }) => {
     setError("");
     onClose();
   };
+
+  // Verificar que tenemos todos los datos necesarios antes de renderizar
+  if (!visible || !citaId) {
+    return null;
+  }
 
   return (
     <Modal
@@ -85,7 +120,7 @@ const RejectionModal = ({ visible, onClose, citaId, onReject }) => {
               disabled={loading}
             >
               <Text style={styles.rejectButtonText}>
-                {loading ? "Rechazando..." : "Rechazar"}
+                {loading ? "Rechazando..." : "Confirmar Rechazo"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -106,16 +141,18 @@ const createStyles = (colors) =>
       padding: 20,
     },
     modalContainer: {
-      backgroundColor: "white",
+      backgroundColor: colors.surface,
       borderRadius: 12,
       padding: 20,
       width: "100%",
       maxWidth: 400,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     title: {
       fontSize: 20,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
       textAlign: "center",
     },

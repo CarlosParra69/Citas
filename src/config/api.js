@@ -1,8 +1,17 @@
 // Configuración de la API
+let isDevelopment;
+try {
+  // Check if we're in development environment
+  isDevelopment = typeof __DEV__ !== "undefined" ? __DEV__ : true;
+} catch (error) {
+  console.error("Error checking __DEV__:", error);
+  isDevelopment = true; // Default to development
+}
+
 export const API_CONFIG = {
   // Configuraciones para diferentes entornos
-  BASE_URL: __DEV__
-    ? "http://10.2.232.57:8000/api" // IP de la máquina host para desarrollo
+  BASE_URL: isDevelopment
+    ? "http://192.168.1.10:8000/api" // IP de la máquina host para desarrollo
     : "https://tu-api-produccion.com/api", // Producción
 
   TIMEOUT: 30000, // Aumentado a 30 segundos

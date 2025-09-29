@@ -8,9 +8,31 @@ import {
   getCitasPendientes,
   aprobarCita,
   rechazarCita,
+  confirmarCita,
+  atenderCita,
+  completarCita,
 } from "../api/citas";
 
-const CitasContext = createContext();
+const CitasContext = createContext({
+  citas: [],
+  citasHoy: [],
+  citasPendientes: [],
+  loading: false,
+  error: null,
+  fetchCitas: async () => {},
+  fetchCitasHoy: async () => {},
+  fetchCitasPendientes: async () => {},
+  agregarCita: async () => {},
+  actualizarCita: async () => {},
+  eliminarCita: async () => {},
+  aprobarCitaPendiente: async () => {},
+  rechazarCitaPendiente: async () => {},
+  completarCitaPendiente: async () => {},
+  clearError: () => {},
+  clearCitas: () => {},
+  clearCitas: () => {},
+  clearCitas: () => {},
+});
 
 export const CitasProvider = ({ children }) => {
   const [citas, setCitas] = useState([]);
@@ -19,47 +41,85 @@ export const CitasProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchCitas = async () => {
+  const fetchCitas = async (user = null) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getCitas();
 
-      if (response.success) {
-        // El backend devuelve datos paginados, extraemos el array de datos
-        const citasData = response.data?.data || response.data || [];
-        setCitas(citasData);
+      // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
+      setCitas([]);
+
+      // Filtrar citas según el rol del usuario
+      let params = {};
+      if (user?.rol === "medico" && user?.medico_id) {
+        params.medico_id = user.medico_id;
+      } else if (user?.rol === "paciente" && user?.paciente_id) {
+        params.paciente_id = user.paciente_id;
       } else {
-        throw new Error(response.message || "Error al cargar citas");
+        // Si no hay usuario o rol válido, no cargar citas
+        setCitas([]);
+        setLoading(false);
+        return;
+      }
+
+      if (typeof getCitas === "function") {
+        try {
+          const response = await getCitas(params);
+
+          if (response && response.success) {
+            // El backend devuelve datos paginados, extraemos el array de datos
+            const citasData = response.data?.data || response.data || [];
+            setCitas(Array.isArray(citasData) ? citasData : []);
+          } else {
+            throw new Error(response?.message || "Error al cargar citas");
+          }
+        } catch (apiError) {
+          console.error("API Error in fetchCitas:", apiError);
+          setCitas([]);
+        }
+      } else {
+        console.warn("getCitas is not a function:", getCitas);
+        setCitas([]);
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       console.error("Error fetching citas:", err);
+      setCitas([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCitasHoy = async () => {
+  const fetchCitasHoy = async (user = null) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getCitasHoy();
 
-      if (response.success) {
+      // Si es médico, filtrar citas de hoy por su ID
+      let params = {};
+      if (user?.rol === "medico" && user?.medico_id) {
+        params.medico_id = user.medico_id;
+      } else if (user?.rol === "paciente" && user?.paciente_id) {
+        params.paciente_id = user.paciente_id;
+      }
+
+      const response = await getCitasHoy(params);
+
+      if (response && response.success !== false) {
         // El backend puede devolver datos paginados o un array directo
         const citasData = response.data?.data || response.data || [];
         setCitasHoy(citasData);
       } else {
-        throw new Error(response.message || "Error al cargar citas de hoy");
+        setCitasHoy([]);
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       console.error("Error fetching citas hoy:", err);
+      setCitasHoy([]);
     } finally {
       setLoading(false);
     }
@@ -148,18 +208,20 @@ export const CitasProvider = ({ children }) => {
       setError(null);
       const response = await getCitasPendientes(medicoId);
 
-      if (response.success) {
+      if (response && response.success !== false) {
         const citasData = response.data?.data || response.data || [];
         setCitasPendientes(citasData);
         return citasData;
       } else {
-        throw new Error(response.message || "Error al cargar citas pendientes");
+        setCitasPendientes([]);
+        return [];
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
       console.error("Error fetching citas pendientes:", err);
+      setCitasPendientes([]);
     } finally {
       setLoading(false);
     }
@@ -225,8 +287,96 @@ export const CitasProvider = ({ children }) => {
     }
   };
 
+  const confirmarCitaPendiente = async (id) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await confirmarCita(id);
+
+      if (response.success) {
+        const citaConfirmada = response.data;
+        // Actualizar en todas las listas
+        setCitas((prevCitas) =>
+          prevCitas.map((cita) => (cita.id === id ? citaConfirmada : cita))
+        );
+        return citaConfirmada;
+      } else {
+        throw new Error(response.message || "Error al confirmar cita");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const atenderCitaPendiente = async (id) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await atenderCita(id);
+
+      if (response.success) {
+        const citaEnCurso = response.data;
+        // Actualizar en todas las listas
+        setCitas((prevCitas) =>
+          prevCitas.map((cita) => (cita.id === id ? citaEnCurso : cita))
+        );
+        setCitasHoy((prevCitas) =>
+          prevCitas.map((cita) => (cita.id === id ? citaEnCurso : cita))
+        );
+        return citaEnCurso;
+      } else {
+        throw new Error(response.message || "Error al atender cita");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completarCitaPendiente = async (id, citaData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await completarCita(id, citaData);
+
+      if (response.success) {
+        const citaCompletada = response.data;
+        // Actualizar en todas las listas
+        setCitas((prevCitas) =>
+          prevCitas.map((cita) => (cita.id === id ? citaCompletada : cita))
+        );
+        setCitasHoy((prevCitas) => prevCitas.filter((cita) => cita.id !== id));
+        return citaCompletada;
+      } else {
+        throw new Error(response.message || "Error al completar cita");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const clearError = () => {
     setError(null);
+  };
+
+  const clearCitas = () => {
+    setCitas([]);
+    setCitasHoy([]);
+    setCitasPendientes([]);
   };
 
   return (
@@ -245,7 +395,11 @@ export const CitasProvider = ({ children }) => {
         eliminarCita,
         aprobarCitaPendiente,
         rechazarCitaPendiente,
+        confirmarCitaPendiente,
+        atenderCitaPendiente,
+        completarCitaPendiente,
         clearError,
+        clearCitas,
       }}
     >
       {children}
@@ -254,9 +408,51 @@ export const CitasProvider = ({ children }) => {
 };
 
 export const useCitas = () => {
-  const context = useContext(CitasContext);
-  if (!context) {
-    throw new Error("useCitas debe ser usado dentro de un CitasProvider");
+  try {
+    const context = useContext(CitasContext);
+    if (!context) {
+      console.warn(
+        "useCitas: CitasContext not found, returning default values"
+      );
+      return {
+        citas: [],
+        citasHoy: [],
+        citasPendientes: [],
+        loading: false,
+        error: null,
+        fetchCitas: async () => {},
+        fetchCitasHoy: async () => {},
+        fetchCitasPendientes: async () => {},
+        agregarCita: async () => {},
+        actualizarCita: async () => {},
+        eliminarCita: async () => {},
+        aprobarCitaPendiente: async () => {},
+        rechazarCitaPendiente: async () => {},
+        confirmarCitaPendiente: async () => {},
+        atenderCitaPendiente: async () => {},
+        completarCitaPendiente: async () => {},
+        clearError: () => {},
+      };
+    }
+    return context;
+  } catch (error) {
+    console.error("Error in useCitas hook:", error);
+    return {
+      citas: [],
+      citasHoy: [],
+      citasPendientes: [],
+      loading: false,
+      error: null,
+      fetchCitas: async () => {},
+      fetchCitasHoy: async () => {},
+      fetchCitasPendientes: async () => {},
+      agregarCita: async () => {},
+      actualizarCita: async () => {},
+      eliminarCita: async () => {},
+      aprobarCitaPendiente: async () => {},
+      rechazarCitaPendiente: async () => {},
+      completarCitaPendiente: async () => {},
+      clearError: () => {},
+    };
   }
-  return context;
 };

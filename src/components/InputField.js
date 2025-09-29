@@ -3,7 +3,20 @@ import { View, TextInput, Text, StyleSheet } from "react-native";
 import { useThemeColors } from "../utils/themeColors";
 
 const InputField = ({ label, error, ...props }) => {
-  const colors = useThemeColors();
+  let colors;
+
+  try {
+    colors = useThemeColors();
+  } catch (error) {
+    console.error("Error in InputField useThemeColors:", error);
+    colors = {
+      text: "#1C1C1E",
+      border: "#C6C6C8",
+      error: "#FF3B30",
+      gray: "#8E8E93",
+    };
+  }
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (

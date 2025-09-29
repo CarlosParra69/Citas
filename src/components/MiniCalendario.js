@@ -6,9 +6,12 @@ import {
   StyleSheet,
   Modal,
   ScrollView,
+  Alert,
+  Picker,
 } from "react-native";
 import { useThemeColors } from "../utils/themeColors";
-import { getBaseURL } from "../config/api";
+import { getMedicoDisponibilidad } from "../api/medicos";
+import { formatDateTimeForAPI } from "../utils/formatDate";
 
 const MiniCalendario = ({
   selectedDate,
@@ -17,6 +20,7 @@ const MiniCalendario = ({
   onAvailabilityCheck,
   isAvailable,
   checkingAvailability,
+  onAvailabilityResult,
 }) => {
   const colors = useThemeColors();
   const styles = createStyles(colors);
@@ -24,91 +28,206 @@ const MiniCalendario = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedTime, setSelectedTime] = useState("");
+  const [tempDateTime, setTempDateTime] = useState(new Date());
   const [medicoHorarios, setMedicoHorarios] = useState([]);
   const [loadingHorarios, setLoadingHorarios] = useState(false);
+  const [lastLoadParams, setLastLoadParams] = useState({
+    medicoId: null,
+    date: null,
+  });
+  const [localAvailability, setLocalAvailability] = useState(null);
+  const [localCheckingAvailability, setLocalCheckingAvailability] =
+    useState(false);
 
-  // Obtener horarios del médico cuando cambia el médico
+  // Cargar horarios disponibles del médico cuando cambie la fecha o el médico
   useEffect(() => {
-    if (medicoId) {
+    const dateString = tempDateTime
+      ? tempDateTime.toISOString().split("T")[0]
+      : null;
+
+    // Evitar llamadas duplicadas
+    if (
+      lastLoadParams.medicoId === medicoId &&
+      lastLoadParams.date === dateString
+    ) {
+      return;
+    }
+
+    if (medicoId && tempDateTime) {
+      setLastLoadParams({ medicoId, date: dateString });
       loadMedicoHorarios();
     } else {
-      setMedicoHorarios([]);
+      if (!medicoId) {
+        setMedicoHorarios([]);
+      }
     }
-  }, [medicoId]);
+  }, [medicoId, tempDateTime, lastLoadParams]);
+
+  // Escuchar cambios en las props de disponibilidad
+  useEffect(() => {
+    if (checkingAvailability !== localCheckingAvailability) {
+      setLocalCheckingAvailability(checkingAvailability);
+    }
+    if (isAvailable !== localAvailability) {
+      setLocalAvailability(isAvailable);
+    }
+  }, [checkingAvailability, isAvailable]);
 
   const loadMedicoHorarios = async () => {
     if (!medicoId) return;
 
     try {
       setLoadingHorarios(true);
-      const today = new Date().toISOString().split("T")[0];
-      const response = await fetch(
-        `${getBaseURL()}/medicos/${medicoId}/disponibilidad?fecha=${today}`
-      );
+      const fechaFormateada = tempDateTime.toISOString().split("T")[0];
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.data.horarios_atencion) {
-          // Convertir los horarios del médico a slots de 30 minutos
-          const horarios = data.data.horarios_atencion;
-          const dayOfWeek = new Date().getDay();
-          const days = [
-            "domingo",
-            "lunes",
-            "martes",
-            "miercoles",
-            "jueves",
-            "viernes",
-            "sabado",
-          ];
-          const todayName = days[dayOfWeek];
+      const response = await getMedicoDisponibilidad(medicoId, fechaFormateada);
 
-          if (horarios[todayName]) {
-            const timeSlots = generateTimeSlots(horarios[todayName]);
-            setMedicoHorarios(timeSlots);
+      if (response && response.success) {
+        // Los horarios pueden venir como string JSON escapado o como objeto
+        let horariosAtencion;
+        try {
+          // Si es un string JSON, parsearlo
+          if (typeof response.data.horarios_atencion === "string") {
+            horariosAtencion = JSON.parse(response.data.horarios_atencion);
+          } else if (typeof response.data.horarios_atencion === "object") {
+            horariosAtencion = response.data.horarios_atencion;
+          } else {
+            horariosAtencion = null;
           }
+        } catch (error) {
+          horariosAtencion = null;
         }
+
+        // Verificar si el médico tiene horarios de atención configurados
+        if (!horariosAtencion) {
+          const horariosPorDefecto = generarHorasPorDefecto();
+          setMedicoHorarios(horariosPorDefecto);
+          return;
+        }
+
+        // Los horarios vienen en formato de rangos como "08:00-17:00"
+        // Necesito convertirlos a horas individuales disponibles
+        const horariosDisponibles = generarHorasDisponibles(horariosAtencion);
+        setMedicoHorarios(horariosDisponibles);
+      } else {
+        setMedicoHorarios([]);
       }
     } catch (error) {
-      console.error("Error loading medico horarios:", error);
       setMedicoHorarios([]);
     } finally {
       setLoadingHorarios(false);
     }
   };
 
-  // Generar slots de tiempo de 30 minutos a partir de los horarios del médico
-  const generateTimeSlots = (horarios) => {
-    const slots = [];
+  // Generar array de horas disponibles a partir de los rangos de horarios del médico
+  const generarHorasDisponibles = (horariosAtencion) => {
+    if (!horariosAtencion) return [];
 
-    horarios.forEach((horario) => {
-      const [startTime, endTime] = horario.split("-");
-      if (startTime && endTime) {
-        const [startHour, startMin] = startTime.split(":").map(Number);
-        const [endHour, endMin] = endTime.split(":").map(Number);
+    const horasDisponibles = [];
+    const diaSemana = tempDateTime
+      .toLocaleDateString("es-ES", { weekday: "long" })
+      .toLowerCase();
 
-        let currentHour = startHour;
-        let currentMin = startMin || 0;
+    // Mapear días de español a inglés para coincidir con el backend
+    const diasMap = {
+      lunes: "lunes",
+      martes: "martes",
+      miércoles: "miercoles",
+      jueves: "jueves",
+      viernes: "viernes",
+      sábado: "sabado",
+      domingo: "domingo",
+    };
 
-        while (
-          currentHour < endHour ||
-          (currentHour === endHour && currentMin < endMin)
+    const diaEspanol = diasMap[diaSemana];
+
+    // Verificar que diaEspanol existe y es válido
+    if (!diaEspanol) return [];
+
+    const horariosDelDia = horariosAtencion[diaEspanol];
+
+    if (
+      !horariosDelDia ||
+      !Array.isArray(horariosDelDia) ||
+      horariosDelDia.length === 0
+    ) {
+      // Usar horarios por defecto cuando no hay horarios específicos para este día
+      return generarHorasPorDefecto();
+    }
+
+    // Generar horas disponibles para cada rango horario del día
+    horariosDelDia.forEach((rangoHorario) => {
+      let horaInicio, horaFin;
+
+      // Verificar si es un objeto con propiedades inicio/fin o un string
+      if (
+        typeof rangoHorario === "object" &&
+        rangoHorario.inicio &&
+        rangoHorario.fin
+      ) {
+        // ✅ Formato correcto: {"inicio": "08:00", "fin": "17:00"}
+        horaInicio = rangoHorario.inicio;
+        horaFin = rangoHorario.fin;
+      } else if (typeof rangoHorario === "string") {
+        // ❌ Formato string: "08:00-17:00"
+        const [inicio, fin] = rangoHorario.split("-");
+        horaInicio = inicio;
+        horaFin = fin;
+      } else {
+        return;
+      }
+
+      if (horaInicio && horaFin) {
+        const [inicioHora, inicioMin] = horaInicio.split(":").map(Number);
+        const [finHora, finMin] = horaFin.split(":").map(Number);
+
+        // Verificar que las horas sean números válidos
+        if (
+          isNaN(inicioHora) ||
+          isNaN(inicioMin) ||
+          isNaN(finHora) ||
+          isNaN(finMin)
         ) {
-          const timeString = `${currentHour
-            .toString()
-            .padStart(2, "0")}:${currentMin.toString().padStart(2, "0")}`;
-          slots.push(timeString);
+          return;
+        }
 
-          currentMin += 30;
-          if (currentMin >= 60) {
-            currentMin = 0;
-            currentHour += 1;
-          }
+        // Generar intervalos de 30 minutos
+        const inicioMinutos = inicioHora * 60 + inicioMin;
+        const finMinutos = finHora * 60 + finMin;
+
+        for (let minutos = inicioMinutos; minutos < finMinutos; minutos += 30) {
+          const hora = Math.floor(minutos / 60);
+          const min = minutos % 60;
+
+          const horaFormateada = `${hora.toString().padStart(2, "0")}:${min
+            .toString()
+            .padStart(2, "0")}`;
+
+          horasDisponibles.push(horaFormateada);
         }
       }
     });
 
-    return slots;
+    return horasDisponibles;
+  };
+
+  // Generar horas por defecto cuando no hay horarios del backend
+  const generarHorasPorDefecto = () => {
+    const horasPorDefecto = [];
+    const horaInicio = 8; // 8 AM
+    const horaFin = 17; // 5 PM
+    const intervalo = 30; // minutos
+
+    for (let hora = horaInicio; hora < horaFin; hora++) {
+      for (let minuto = 0; minuto < 60; minuto += intervalo) {
+        const horaFormateada = `${hora.toString().padStart(2, "0")}:${minuto
+          .toString()
+          .padStart(2, "0")}`;
+        horasPorDefecto.push(horaFormateada);
+      }
+    }
+
+    return horasPorDefecto;
   };
 
   const getDaysInMonth = (date) => {
@@ -147,24 +266,77 @@ const MiniCalendario = ({
       return;
     }
 
-    onDateSelect(selectedDate);
-    setShowTimePicker(true);
+    // Establecer la fecha temporal para cargar horarios
+    setTempDateTime(selectedDate);
+
+    // Si hay un médico seleccionado, mostrar modal con horarios
+    if (medicoId) {
+      setTempDateTime(selectedDate);
+      // Cargar horarios antes de mostrar el modal
+      loadMedicoHorarios()
+        .then(() => {
+          setShowTimePicker(true);
+        })
+        .catch((error) => {
+          setShowTimePicker(true); // Mostrar modal de todas formas
+        });
+    } else {
+      // Si no hay médico, solo seleccionar la fecha
+      onDateSelect(selectedDate);
+    }
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
     const [hours, minutes] = time.split(":");
-    const dateTime = new Date(selectedDate);
-    dateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
 
-    const isoString = dateTime.toISOString();
-    onDateSelect(dateTime);
+    // SOLUCIÓN FINAL: Crear fecha usando toLocaleDateString para mantener zona horaria local
+    const today = new Date();
+    const localDate = today.toLocaleDateString("es-CO", {
+      timeZone: "America/Bogota",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    // Parsear correctamente la fecha local (DD/MM/YYYY)
+    const [day, month, year] = localDate.split("/");
+
+    // Crear fecha en zona horaria local de Colombia
+    const targetDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1,
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes),
+      0,
+      0
+    );
+
+    onDateSelect(targetDate);
 
     if (onAvailabilityCheck) {
+      // Usar la función de utilidad para formatear la fecha correctamente
+      const isoString = formatDateTimeForAPI(targetDate);
+
+      // Establecer estado local de carga
+      setLocalCheckingAvailability(true);
+      setLocalAvailability(null);
+
+      // Llamar a la función del padre y manejar la respuesta
       onAvailabilityCheck(isoString);
     }
 
     setShowTimePicker(false);
+  };
+
+  const handleCloseModal = () => {
+    setShowTimePicker(false);
+    setSelectedTime("");
+    // Limpiar la fecha si no se seleccionó una hora
+    if (!selectedDate) {
+      setTempDateTime(new Date());
+    }
   };
 
   const navigateMonth = (direction) => {
@@ -242,8 +414,6 @@ const MiniCalendario = ({
   };
 
   const renderTimeSlots = () => {
-    if (!selectedDate) return null;
-
     if (loadingHorarios) {
       return (
         <View style={styles.loadingContainer}>
@@ -255,8 +425,9 @@ const MiniCalendario = ({
     if (medicoHorarios.length === 0) {
       return (
         <View style={styles.noSlotsContainer}>
-          <Text style={styles.noSlotsText}>
-            No hay horarios disponibles para este médico hoy
+          <Text style={styles.noSlotsText}>⚠️ Sin Horarios Disponibles</Text>
+          <Text style={styles.noSlotsSubtext}>
+            No se pudieron cargar los horarios del médico.
           </Text>
         </View>
       );
@@ -265,26 +436,27 @@ const MiniCalendario = ({
     return (
       <ScrollView
         style={styles.timeSlotsContainer}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={styles.timeSlotsContent}
       >
-        <Text style={styles.timeSlotsTitle}>Horarios disponibles:</Text>
+        {/* Grid de botones de horarios */}
         <View style={styles.timeGrid}>
-          {medicoHorarios.map((time) => (
+          {medicoHorarios.map((time, index) => (
             <TouchableOpacity
-              key={time}
+              key={`${time}-${index}`}
               style={[
-                styles.timeSlot,
-                selectedTime === time && styles.selectedTimeSlot,
+                styles.timeButton,
+                selectedTime === time && styles.selectedTimeButton,
               ]}
               onPress={() => handleTimeSelect(time)}
             >
               <Text
                 style={[
-                  styles.timeSlotText,
-                  selectedTime === time && styles.selectedTimeSlotText,
+                  styles.timeButtonText,
+                  selectedTime === time && styles.selectedTimeButtonText,
                 ]}
               >
-                {time}
+                {formatTime12Hour(time)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -293,8 +465,18 @@ const MiniCalendario = ({
     );
   };
 
+  const formatTime12Hour = (time24) => {
+    const [hours, minutes] = time24.split(":");
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
   return (
     <View style={styles.container}>
+      {/* Modal debe estar fuera del contenedor principal */}
+
       {/* Selector de Mes */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigateMonth(-1)}>
@@ -325,23 +507,33 @@ const MiniCalendario = ({
         <View style={styles.selectedDateContainer}>
           <Text style={styles.selectedDateText}>
             Fecha seleccionada: {selectedDate.toLocaleDateString("es-ES")}
-            {selectedTime && ` a las ${selectedTime}`}
           </Text>
 
-          {checkingAvailability && (
+          <TouchableOpacity
+            style={styles.openModalButton}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={styles.openModalButtonText}>
+              🕐 Ver Horarios Disponibles ({medicoHorarios.length})
+            </Text>
+          </TouchableOpacity>
+
+          {localCheckingAvailability && (
             <Text style={styles.checkingText}>
               Verificando disponibilidad...
             </Text>
           )}
 
-          {isAvailable !== null && !checkingAvailability && (
+          {localAvailability !== null && !localCheckingAvailability && (
             <Text
               style={[
                 styles.availabilityText,
-                { color: isAvailable ? colors.success : colors.error },
+                { color: localAvailability ? colors.success : colors.error },
               ]}
             >
-              {isAvailable ? "✓ Médico disponible" : "✗ Médico no disponible"}
+              {localAvailability
+                ? "✓ Médico disponible"
+                : "✗ Médico no disponible"}
             </Text>
           )}
         </View>
@@ -357,14 +549,19 @@ const MiniCalendario = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              Seleccionar hora - {selectedDate?.toLocaleDateString("es-ES")}
+              🕐 Selecciona una Hora -{" "}
+              {tempDateTime?.toLocaleDateString("es-ES")}
             </Text>
 
-            <View style={styles.timeSlotsContainer}>{renderTimeSlots()}</View>
+            <Text style={styles.modalDate}>
+              📅 {tempDateTime?.toLocaleDateString("es-ES")}
+            </Text>
+
+            {renderTimeSlots()}
 
             <TouchableOpacity
               style={styles.closeButton}
-              onPress={() => setShowTimePicker(false)}
+              onPress={handleCloseModal}
             >
               <Text style={styles.closeButtonText}>Cancelar</Text>
             </TouchableOpacity>
@@ -378,7 +575,7 @@ const MiniCalendario = ({
 const createStyles = (colors) =>
   StyleSheet.create({
     container: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginVertical: 8,
@@ -427,13 +624,14 @@ const createStyles = (colors) =>
     day: {
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: 50,
       justifyContent: "center",
       alignItems: "center",
     },
     emptyDay: {
       width: 32,
       height: 32,
+      borderRadius: 50,
     },
     dayText: {
       fontSize: 14,
@@ -441,20 +639,22 @@ const createStyles = (colors) =>
       fontWeight: "500",
     },
     selectedDayContainer: {
-      backgroundColor: colors.primary + "20",
+      borderRadius: 50,
     },
     selectedDay: {
       backgroundColor: colors.primary,
+      borderRadius: 50,
     },
     selectedDayText: {
       color: colors.white,
       fontWeight: "600",
     },
     todayContainer: {
-      backgroundColor: colors.accent + "20",
+      borderRadius: 50,
     },
     today: {
       backgroundColor: colors.accent,
+      borderRadius: 50,
     },
     todayText: {
       color: colors.white,
@@ -462,6 +662,7 @@ const createStyles = (colors) =>
     },
     pastDay: {
       backgroundColor: colors.lightGray,
+      borderRadius: 50,
     },
     pastDayText: {
       color: colors.gray,
@@ -488,63 +689,107 @@ const createStyles = (colors) =>
       fontWeight: "600",
     },
     modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
       justifyContent: "center",
       alignItems: "center",
+      zIndex: 999999,
     },
     modalContent: {
-      backgroundColor: colors.white,
-      borderRadius: 16,
-      padding: 20,
-      width: "90%",
-      maxHeight: "70%",
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 16,
+      width: "95%",
+      maxWidth: 380,
+      maxHeight: "75%",
+      minHeight: 280,
+      elevation: 20,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 10,
+      },
+      shadowOpacity: 0.5,
+      shadowRadius: 15,
+      borderWidth: 2,
+      borderColor: colors.border,
     },
     modalTitle: {
       fontSize: 18,
       fontWeight: "600",
       color: colors.text,
       textAlign: "center",
-      marginBottom: 20,
+      marginBottom: 10,
     },
-    timeSlotsContainer: {
-      maxHeight: 350,
-    },
-    timeSlotsTitle: {
+    modalDate: {
       fontSize: 16,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 12,
+      fontWeight: "500",
+      color: colors.primary,
       textAlign: "center",
+      marginBottom: 10,
     },
+    // Estilos de modalStatus eliminados - ya no se usa
+    timeSlotsContainer: {
+      flex: 1,
+      maxHeight: 250,
+      minHeight: 120,
+    },
+    timeSlotsContent: {
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      alignItems: "center",
+    },
+    // Estilos de timeButtonsContainer y timeSlotsTitle eliminados - ya no se usa
     timeGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      justifyContent: "space-between",
-    },
-    timeSlot: {
-      width: "48%",
-      padding: 12,
-      marginVertical: 4,
-      backgroundColor: colors.background,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: colors.border,
+      justifyContent: "space-around",
       alignItems: "center",
+      paddingVertical: 5,
+      gap: 4,
     },
-    selectedTimeSlot: {
+    // Estilos de timeSlot eliminados - ya no se usa
+    timeButton: {
+      backgroundColor: colors.input || colors.surface,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderRadius: 12,
+      padding: 10,
+      margin: 4,
+      minWidth: "48%",
+      maxWidth: "48%",
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 45,
+      elevation: 3,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+    },
+    selectedTimeButton: {
       backgroundColor: colors.primary,
       borderColor: colors.primary,
+      transform: [{ scale: 1.05 }],
+      elevation: 6,
     },
-    timeSlotText: {
-      fontSize: 16,
-      color: colors.text,
+    timeButtonText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: "700",
       textAlign: "center",
-      fontWeight: "500",
+      lineHeight: 16,
     },
-    selectedTimeSlotText: {
+    selectedTimeButtonText: {
       color: colors.white,
-      fontWeight: "600",
+      fontWeight: "800",
     },
     loadingContainer: {
       padding: 20,
@@ -564,6 +809,13 @@ const createStyles = (colors) =>
       color: colors.gray,
       textAlign: "center",
     },
+    noSlotsSubtext: {
+      fontSize: 12,
+      color: colors.gray,
+      textAlign: "center",
+      marginTop: 8,
+      opacity: 0.7,
+    },
     closeButton: {
       marginTop: 16,
       padding: 12,
@@ -576,6 +828,30 @@ const createStyles = (colors) =>
       fontSize: 16,
       fontWeight: "600",
     },
+    // Estilos del Picker eliminados - ya no se usa
+    // Estilos de selectedTimeContainer eliminados - ya no se usa
+    // Estilos de horariosIndicator eliminados - ya no se usa
+    openModalButton: {
+      backgroundColor: colors.primary,
+      padding: 12,
+      borderRadius: 10,
+      marginTop: 10,
+      elevation: 3,
+      shadowColor: colors.primary,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    },
+    openModalButtonText: {
+      color: colors.white,
+      textAlign: "center",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    // Estilos de modalInfo eliminados - ya no se usa
   });
 
 export default MiniCalendario;

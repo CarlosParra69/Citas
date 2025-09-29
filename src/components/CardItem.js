@@ -3,7 +3,20 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useThemeColors } from "../utils/themeColors";
 
 const CardItem = ({ title, subtitle, onPress, rightContent }) => {
-  const colors = useThemeColors();
+  let colors;
+
+  try {
+    colors = useThemeColors();
+  } catch (error) {
+    console.error("Error in CardItem useThemeColors:", error);
+    colors = {
+      white: "#FFFFFF",
+      black: "#000000",
+      text: "#1C1C1E",
+      gray: "#8E8E93",
+    };
+  }
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (
@@ -24,8 +37,10 @@ const CardItem = ({ title, subtitle, onPress, rightContent }) => {
 const createStyles = (colors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
       padding: 15,
       marginVertical: 8,
       marginHorizontal: 16,

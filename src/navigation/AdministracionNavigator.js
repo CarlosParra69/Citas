@@ -23,6 +23,7 @@ export default function AdministracionNavigator() {
         headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: "bold",
+          color: colors.white,
         },
       }}
     >

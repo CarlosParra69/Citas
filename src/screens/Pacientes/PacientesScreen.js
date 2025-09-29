@@ -208,7 +208,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 26,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
       textAlign: "center",
     },
@@ -222,12 +222,13 @@ const createStyles = (colors) =>
       marginBottom: 16,
     },
     searchInput: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
       borderRadius: 8,
       padding: 12,
       fontSize: 16,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
+      color: colors.text,
     },
     createButton: {
       marginBottom: 16,

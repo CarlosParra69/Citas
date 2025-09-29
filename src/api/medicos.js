@@ -12,7 +12,29 @@ export const getMedicoById = async (id) => {
 
 export const getMedicoDisponibilidad = async (id, fecha = null) => {
   const params = fecha ? { fecha } : {};
-  const response = await axiosInstance.get(`/medicos/${id}/disponibilidad`, { params });
+  const response = await axiosInstance.get(`/medicos/${id}/disponibilidad`, {
+    params,
+  });
+  return response.data;
+};
+
+export const checkMedicoAvailability = async (
+  id,
+  fechaHora,
+  timezoneInfo = null
+) => {
+  const postData = {
+    fecha_hora: fechaHora,
+  };
+
+  if (timezoneInfo) {
+    postData.timezone_info = timezoneInfo;
+  }
+
+  const response = await axiosInstance.post(
+    `/medicos/${id}/check-availability`,
+    postData
+  );
   return response.data;
 };
 

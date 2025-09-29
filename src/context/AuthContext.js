@@ -2,7 +2,16 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as authApi from "../api/auth";
 
-const AuthContext = createContext();
+const AuthContext = createContext({
+  user: null,
+  loading: false,
+  error: null,
+  login: async () => {},
+  register: async () => {},
+  logout: async () => {},
+  clearError: () => {},
+  setUser: () => {},
+});
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -16,10 +25,31 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthState = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
-      if (token) {
-        const userData = await authApi.getProfile();
-        setUser(userData.data);
+      if (typeof AsyncStorage !== "undefined" && AsyncStorage.getItem) {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          try {
+            if (typeof authApi !== "undefined" && authApi.getProfile) {
+              const userData = await authApi.getProfile();
+              setUser(userData.data);
+            } else {
+              console.warn("authApi.getProfile not available");
+              setUser(null);
+            }
+          } catch (apiError) {
+            console.error("Error getting profile:", apiError);
+            try {
+              if (
+                typeof AsyncStorage !== "undefined" &&
+                AsyncStorage.removeItem
+              ) {
+                await AsyncStorage.removeItem("token");
+              }
+            } catch (removeError) {
+              console.error("Error removing token:", removeError);
+            }
+          }
+        }
       }
     } catch (error) {
       // Log detallado para debugging (solo en consola)
@@ -34,7 +64,13 @@ export const AuthProvider = ({ children }) => {
       }
 
       console.log("No hay sesión activa");
-      await AsyncStorage.removeItem("token");
+      try {
+        if (typeof AsyncStorage !== "undefined" && AsyncStorage.removeItem) {
+          await AsyncStorage.removeItem("token");
+        }
+      } catch (storageError) {
+        console.error("Error removing token:", storageError);
+      }
     } finally {
       setLoading(false);
     }
@@ -119,9 +155,35 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuthContext = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuthContext debe usarse dentro de un AuthProvider");
+  try {
+    const context = useContext(AuthContext);
+    if (!context) {
+      console.warn(
+        "useAuthContext: AuthContext not found, returning default values"
+      );
+      return {
+        user: null,
+        loading: false,
+        error: null,
+        login: async () => {},
+        register: async () => {},
+        logout: async () => {},
+        clearError: () => {},
+        setUser: () => {},
+      };
+    }
+    return context;
+  } catch (error) {
+    console.error("Error in useAuthContext hook:", error);
+    return {
+      user: null,
+      loading: false,
+      error: null,
+      login: async () => {},
+      register: async () => {},
+      logout: async () => {},
+      clearError: () => {},
+      setUser: () => {},
+    };
   }
-  return context;
 };

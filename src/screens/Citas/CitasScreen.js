@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   ScrollView,
@@ -13,14 +13,19 @@ import CardItem from "../../components/CardItem";
 import { formatDate } from "../../utils/formatDate";
 import { useCitas } from "../../context/CitasContext";
 import { useThemeColors } from "../../utils/themeColors";
+import { useAuthContext } from "../../context/AuthContext";
 
 const CitasScreen = ({ navigation }) => {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
-  const { citas, loading, error, fetchCitas, clearError } = useCitas();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const { user } = useAuthContext();
+  const { citas, loading, error, fetchCitas, clearError, clearCitas } =
+    useCitas();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
+    clearCitas();
     loadCitas();
   }, []);
 
@@ -33,7 +38,8 @@ const CitasScreen = ({ navigation }) => {
 
   const loadCitas = async () => {
     try {
-      await fetchCitas();
+      // Pasar el usuario para filtrar las citas según su rol
+      await fetchCitas(user);
     } catch (err) {
       console.error("Error loading citas:", err);
     }
@@ -104,11 +110,26 @@ const CitasScreen = ({ navigation }) => {
           title="Nueva Cita"
           onPress={() => navigation.navigate("CrearCitaScreen")}
         />
-        <ButtonPrimary
-          title="Citas de Hoy"
-          onPress={() => navigation.navigate("CitasHoyScreen")}
-          style={styles.secondaryButton}
-        />
+
+        {user?.rol === "medico" && (
+          <>
+            <ButtonPrimary
+              title="Citas de Hoy"
+              onPress={() => navigation.navigate("CitasHoyScreen")}
+            />
+            <ButtonPrimary
+              title="Citas por Aprobar"
+              onPress={() => navigation.navigate("CitasPendientesScreen")}
+            />
+          </>
+        )}
+
+        {user?.rol === "paciente" && (
+          <ButtonPrimary
+            title="Confirmar Cita"
+            onPress={() => navigation.navigate("ConfirmarCitaScreen")}
+          />
+        )}
       </View>
 
       {!citas || citas.length === 0 ? (
@@ -143,9 +164,12 @@ const createStyles = (colors) =>
     title: {
       fontSize: 26,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 16,
       textAlign: "center",
+    },
+    buttonContainer: {
+      marginBottom: 16,
     },
     citasList: {
       marginTop: 16,
@@ -180,15 +204,6 @@ const createStyles = (colors) =>
       fontSize: 12,
       fontWeight: "600",
       textTransform: "capitalize",
-    },
-    buttonContainer: {
-      flexDirection: "row",
-      gap: 10,
-      marginBottom: 16,
-    },
-    secondaryButton: {
-      backgroundColor: colors.secondary,
-      flex: 1,
     },
   });
 

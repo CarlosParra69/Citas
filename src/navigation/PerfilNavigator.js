@@ -19,6 +19,7 @@ export default function PerfilNavigator() {
         headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: "bold",
+          color: colors.white,
         },
       }}
     >

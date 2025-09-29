@@ -138,6 +138,7 @@ const createStyles = (colors) =>
     container: {
       flex: 1,
       padding: 16,
+      backgroundColor: colors.background,
     },
     welcomeText: {
       fontSize: 20,

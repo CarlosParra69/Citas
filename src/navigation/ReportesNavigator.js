@@ -21,6 +21,7 @@ export default function ReportesNavigator() {
         headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: "bold",
+          color: colors.white,
         },
       }}
     >

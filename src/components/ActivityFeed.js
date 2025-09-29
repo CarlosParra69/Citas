@@ -55,16 +55,20 @@ const ActivityFeed = ({ activities, style, useFlatList = true }) => {
 const createStyles = (colors) =>
   StyleSheet.create({
     container: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     emptyContainer: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 32,
       alignItems: "center",
       justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     emptyText: {
       fontSize: 16,

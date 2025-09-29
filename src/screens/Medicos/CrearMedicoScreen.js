@@ -52,13 +52,26 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
 
   const formatTime = (timeString) => {
     if (!timeString) return "Seleccionar";
+    // Crear una fecha temporal para formatear correctamente
     const [hours, minutes] = timeString.split(":");
-    return `${hours}:${minutes}`;
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes));
+    return date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
   const handleTimeSelect = (event, selectedTime) => {
     if (selectedTime && selectedDay && selectedSlot !== null) {
-      const timeString = selectedTime.toTimeString().slice(0, 5);
+      // Obtener la hora en formato 24h para almacenamiento
+      const hours24 = selectedTime.getHours();
+      const minutes = selectedTime.getMinutes();
+      const timeString = `${hours24.toString().padStart(2, "0")}:${minutes
+        .toString()
+        .padStart(2, "0")}`;
+
       const nuevosHorarios = { ...horarios };
 
       if (!nuevosHorarios[selectedDay]) nuevosHorarios[selectedDay] = [];
@@ -84,7 +97,7 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
         value: new Date(),
         onChange: handleTimeSelect,
         mode: "time",
-        is24Hour: true,
+        is24Hour: false,
       });
     }
   };
@@ -169,7 +182,7 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
         <DateTimePickerIOS
           value={new Date()}
           mode="time"
-          is24Hour={true}
+          is24Hour={false}
           onChange={handleTimeSelect}
         />
       )}
@@ -452,6 +465,17 @@ const CrearMedicoScreen = ({ navigation, route }) => {
     try {
       setLoading(true);
 
+      // Convertir horarios del formato array al formato string que espera el backend
+      const horariosConvertidos = {};
+      Object.keys(formData.horarios_atencion).forEach((dia) => {
+        const horariosDia = formData.horarios_atencion[dia];
+        if (horariosDia && horariosDia.length > 0) {
+          horariosConvertidos[dia] = horariosDia.map(
+            (horario) => `${horario.inicio}-${horario.fin}`
+          );
+        }
+      });
+
       const medicoData = {
         nombre: formData.nombre.trim(),
         apellido: formData.apellido.trim(),
@@ -464,7 +488,7 @@ const CrearMedicoScreen = ({ navigation, route }) => {
           ? parseFloat(formData.tarifa_consulta)
           : null,
         biografia: formData.biografia.trim(),
-        horarios_atencion: formData.horarios_atencion,
+        horarios_atencion: horariosConvertidos,
         activo: formData.activo,
       };
 
@@ -714,7 +738,7 @@ const CrearMedicoScreen = ({ navigation, route }) => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Información Profesional</Text>
 
-        <Text style={styles.label}>Especialidad *</Text>
+        <Text style={styles.label}>Especialidad</Text>
         <View style={styles.especialidadesContainer}>
           {especialidades.map((especialidad) => (
             <TouchableOpacity
@@ -798,8 +822,10 @@ const createHorariosStyles = (colors) =>
     diaContainer: {
       marginBottom: 16,
       padding: 12,
-      backgroundColor: colors.background,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     diaHeader: {
       flexDirection: "row",
@@ -815,22 +841,24 @@ const createHorariosStyles = (colors) =>
     diaLabel: {
       fontSize: 16,
       fontWeight: "600",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
     },
     horarioCard: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 12,
       marginBottom: 8,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 1,
       },
-      shadowOpacity: 0.05,
-      shadowRadius: 2,
-      elevation: 2,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     horarioRow: {
       flexDirection: "row",
@@ -840,9 +868,9 @@ const createHorariosStyles = (colors) =>
     },
     timeButton: {
       flex: 1,
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       borderRadius: 8,
       paddingVertical: 12,
       paddingHorizontal: 16,
@@ -872,6 +900,8 @@ const createHorariosStyles = (colors) =>
       borderRadius: 16,
       justifyContent: "center",
       alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     deleteSlotButtonText: {
       color: colors.white,
@@ -888,6 +918,8 @@ const createHorariosStyles = (colors) =>
       justifyContent: "center",
       gap: 8,
       alignSelf: "flex-start",
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     addButtonIcon: {
       fontSize: 16,
@@ -917,23 +949,25 @@ const createStyles = (colors) =>
     title: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       textAlign: "center",
       marginBottom: 24,
     },
     section: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     sectionTitle: {
       fontSize: 18,
@@ -959,8 +993,8 @@ const createStyles = (colors) =>
       paddingVertical: 8,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: colors.lightGray,
-      backgroundColor: colors.white,
+      borderColor: colors.border,
+      backgroundColor: colors.input || colors.surface,
     },
     selectedEspecialidadChip: {
       backgroundColor: colors.primary,
@@ -1008,18 +1042,20 @@ const createStyles = (colors) =>
       fontWeight: "600",
     },
     profileImageSection: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
       alignItems: "center",
     },
     avatarContainer: {

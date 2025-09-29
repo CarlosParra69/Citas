@@ -359,10 +359,10 @@ const createStyles = (colors) =>
       backgroundColor: colors.background,
     },
     header: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.surface,
       padding: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.lightGray,
+      borderBottomColor: colors.border,
     },
     headerTop: {
       flexDirection: "row",
@@ -373,7 +373,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 20,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       flex: 1,
     },
     createButton: {
@@ -385,11 +385,12 @@ const createStyles = (colors) =>
     },
     searchInput: {
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
       fontSize: 16,
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
+      color: colors.text,
     },
     filtersContainer: {
       flexDirection: "row",
@@ -402,8 +403,9 @@ const createStyles = (colors) =>
       paddingHorizontal: 12,
       borderRadius: 6,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       alignItems: "center",
+      backgroundColor: colors.input || colors.surface,
     },
     activeFilterButton: {
       backgroundColor: colors.primary,
@@ -423,19 +425,21 @@ const createStyles = (colors) =>
       textAlign: "center",
     },
     medicoCard: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       marginHorizontal: 16,
       marginVertical: 4,
       borderRadius: 12,
       padding: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     medicoHeader: {
       flexDirection: "row",

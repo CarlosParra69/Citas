@@ -5,7 +5,17 @@ import { useThemeColors } from "../utils/themeColors";
 const Stack = createStackNavigator();
 
 export default function AuthNavigator() {
-  const colors = useThemeColors();
+  let colors;
+
+  try {
+    colors = useThemeColors();
+  } catch (error) {
+    console.error("Error in AuthNavigator useThemeColors:", error);
+    colors = {
+      primary: "#FF6B35",
+      white: "#FFFFFF",
+    };
+  }
 
   return (
     <Stack.Navigator
@@ -16,6 +26,7 @@ export default function AuthNavigator() {
         headerTintColor: colors.white,
         headerTitleStyle: {
           fontWeight: "bold",
+          color: colors.white,
         },
       }}
     >

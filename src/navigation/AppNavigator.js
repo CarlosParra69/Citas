@@ -8,11 +8,37 @@ import { useAuthContext } from "../context/AuthContext";
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { user, loading } = useAuthContext();
+  let user, loading;
+
+  try {
+    const authContext = useAuthContext();
+    user = authContext?.user;
+    loading = authContext?.loading || false;
+  } catch (error) {
+    console.error("Error in AppNavigator useAuthContext:", error);
+    user = null;
+    loading = false;
+  }
 
   // Mostrar loading mientras se verifica el estado de autenticación
   if (loading) {
-    return <LoadingSpinner message="Verificando sesión..." />;
+    try {
+      return <LoadingSpinner message="Verificando sesión..." />;
+    } catch (error) {
+      console.error("Error rendering LoadingSpinner in AppNavigator:", error);
+      return (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "#F9F9F9",
+          }}
+        >
+          <Text style={{ fontSize: 16, color: "#FF6B35" }}>Cargando...</Text>
+        </View>
+      );
+    }
   }
 
   return (

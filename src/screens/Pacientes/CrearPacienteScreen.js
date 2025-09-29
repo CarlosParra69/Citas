@@ -545,7 +545,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
       textAlign: "center",
     },
@@ -557,6 +557,19 @@ const createStyles = (colors) =>
     },
     section: {
       marginBottom: 24,
+      backgroundColor: colors.card || colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     sectionTitle: {
       fontSize: 18,
@@ -569,18 +582,20 @@ const createStyles = (colors) =>
       marginBottom: 32,
     },
     profileImageSection: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
       alignItems: "center",
     },
     avatarContainer: {
@@ -594,6 +609,8 @@ const createStyles = (colors) =>
       justifyContent: "center",
       alignItems: "center",
       marginBottom: 8,
+      borderWidth: 2,
+      borderColor: colors.border,
     },
     avatarText: {
       fontSize: 32,
@@ -603,6 +620,8 @@ const createStyles = (colors) =>
       width: 80,
       height: 80,
       borderRadius: 40,
+      borderWidth: 2,
+      borderColor: colors.border,
     },
     cameraIcon: {
       position: "absolute",
@@ -613,6 +632,8 @@ const createStyles = (colors) =>
       borderRadius: 12,
       justifyContent: "center",
       alignItems: "center",
+      borderWidth: 2,
+      borderColor: colors.border,
     },
     cameraIconText: {
       fontSize: 12,

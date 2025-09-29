@@ -1,7 +1,7 @@
 import axiosInstance from "../utils/axiosInstance";
 
-export const getCitas = async () => {
-  const response = await axiosInstance.get("/citas");
+export const getCitas = async (params = {}) => {
+  const response = await axiosInstance.get("/citas", { params });
   return response.data;
 };
 
@@ -10,8 +10,21 @@ export const getCitaById = async (id) => {
   return response.data;
 };
 
-export const getCitasHoy = async () => {
-  const response = await axiosInstance.get("/citas-hoy");
+export const getCitasHoy = async (params = {}) => {
+  const response = await axiosInstance.get("/citas-hoy", { params });
+  return response.data;
+};
+
+export const atenderCita = async (id) => {
+  const response = await axiosInstance.patch(`/citas/${id}/atender`);
+  return response.data;
+};
+
+export const completarCita = async (id, citaData) => {
+  const response = await axiosInstance.patch(
+    `/citas/${id}/completar`,
+    citaData
+  );
   return response.data;
 };
 
@@ -54,5 +67,10 @@ export const aprobarCita = async (id, data = {}) => {
 
 export const rechazarCita = async (id, data) => {
   const response = await axiosInstance.patch(`/citas/${id}/rechazar`, data);
+  return response.data;
+};
+
+export const confirmarCita = async (id) => {
+  const response = await axiosInstance.patch(`/citas/${id}/confirmar`);
   return response.data;
 };

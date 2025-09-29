@@ -15,7 +15,19 @@ const ButtonPrimary = ({
   style,
   colors: propColors,
 }) => {
-  const themeColors = useThemeColors();
+  let themeColors;
+
+  try {
+    themeColors = useThemeColors();
+  } catch (error) {
+    console.error("Error in ButtonPrimary useThemeColors:", error);
+    themeColors = {
+      primary: "#FF6B35",
+      gray: "#8E8E93",
+      white: "#FFFFFF",
+    };
+  }
+
   const colors = propColors || themeColors;
 
   // Verificar que colors tenga las propiedades necesarias

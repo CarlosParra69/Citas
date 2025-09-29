@@ -3,7 +3,17 @@ import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { useThemeColors } from "../utils/themeColors";
 
 const Loader = () => {
-  const colors = useThemeColors();
+  let colors;
+
+  try {
+    colors = useThemeColors();
+  } catch (error) {
+    console.error("Error in Loader useThemeColors:", error);
+    colors = {
+      primary: "#FF6B35",
+    };
+  }
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   return (

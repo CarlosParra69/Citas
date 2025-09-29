@@ -63,7 +63,9 @@ const SuperadminDashboard = ({ dashboardData, navigation }) => {
 
       {/* Actividad reciente */}
       <View style={styles.activitySection}>
-        <Text style={styles.sectionTitle}>Actividad Reciente</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Actividad Reciente
+        </Text>
         <ActivityFeed activities={mockActivities} />
       </View>
     </ScrollView>
@@ -75,11 +77,12 @@ const createStyles = (colors) =>
     container: {
       flex: 1,
       padding: 16,
+      backgroundColor: colors.background,
     },
     welcomeText: {
       fontSize: 20,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 24,
       textAlign: "center",
     },

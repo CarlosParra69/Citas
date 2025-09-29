@@ -84,8 +84,10 @@ const CitasPendientesCard = ({ cita, onAprobar, onRechazar }) => {
 const createStyles = (colors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       marginHorizontal: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
       marginVertical: 8,
       borderRadius: 12,
       padding: 16,

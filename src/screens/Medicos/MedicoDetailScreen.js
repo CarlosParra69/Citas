@@ -9,7 +9,11 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
-import { getMedicoById, getMedicoDisponibilidad } from "../../api/medicos";
+import {
+  getMedicoById,
+  getMedicoDisponibilidad,
+  checkMedicoAvailability,
+} from "../../api/medicos";
 import { getAvatarByUserId } from "../../api/avatar";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -26,6 +30,11 @@ const MedicoDetailScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [medicoAvatar, setMedicoAvatar] = useState(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [availabilityChecked, setAvailabilityChecked] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState(null);
+  const [customDateTime, setCustomDateTime] = useState(null);
 
   useEffect(() => {
     loadMedicoData();
@@ -43,6 +52,24 @@ const MedicoDetailScreen = ({ route, navigation }) => {
       setError(null);
     }
   }, [error]);
+
+  useEffect(() => {
+    // Verificar disponibilidad cuando ambos datos estén disponibles
+    if (
+      medico &&
+      disponibilidad &&
+      !availabilityChecked &&
+      !checkingAvailability
+    ) {
+      const timer = setTimeout(() => {
+        if (!checkingAvailability && !availabilityChecked) {
+          checkAvailability();
+        }
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [medico, disponibilidad, availabilityChecked, checkingAvailability]);
 
   const loadMedicoData = async () => {
     try {
@@ -66,6 +93,8 @@ const MedicoDetailScreen = ({ route, navigation }) => {
         } catch (dispError) {
           // console.log("No se pudo cargar disponibilidad:", dispError);
         }
+
+        // La verificación se hará automáticamente cuando los datos estén listos
       } else {
         throw new Error(
           medicoResponse.message || "Error al cargar información del médico"
@@ -75,7 +104,6 @@ const MedicoDetailScreen = ({ route, navigation }) => {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       setError(errorMessage);
-      console.error("Error loading medico data:", err);
     } finally {
       setLoading(false);
     }
@@ -100,13 +128,269 @@ const MedicoDetailScreen = ({ route, navigation }) => {
         // console.log("No se pudo obtener el avatar:", result.message);
       }
     } catch (error) {
-      console.error("Error cargando avatar del médico:", error);
+      // Error loading avatar
+    }
+  };
+
+  const getNextAvailableDateTime = () => {
+    const now = new Date();
+    const diasSemana = [
+      "domingo",
+      "lunes",
+      "martes",
+      "miercoles",
+      "jueves",
+      "viernes",
+      "sabado",
+    ];
+
+    // Usar los datos de disponibilidad que ya se cargaron
+    const horariosAtencion =
+      disponibilidad?.horarios_atencion || medico?.horarios_atencion;
+
+    // Verificación de seguridad: si no hay horarios, usar fecha por defecto
+    if (!horariosAtencion) {
+      const futureTime = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      return (
+        futureTime.getFullYear() +
+        "-" +
+        String(futureTime.getMonth() + 1).padStart(2, "0") +
+        "-" +
+        String(futureTime.getDate()).padStart(2, "0") +
+        "T09:00:00"
+      );
+    }
+
+    // Buscar el próximo día hábil con horarios disponibles
+    for (let i = 0; i < 7; i++) {
+      const checkDate = new Date(now);
+      checkDate.setDate(checkDate.getDate() + i);
+
+      const diaSemana = diasSemana[checkDate.getDay()];
+      const horariosDelDia = horariosAtencion[diaSemana];
+
+      // Si el día tiene horarios configurados
+      if (
+        horariosDelDia &&
+        Array.isArray(horariosDelDia) &&
+        horariosDelDia.length > 0
+      ) {
+        // Si es hoy, verificar que la hora sea futura
+        if (i === 0) {
+          // Buscar el próximo horario disponible hoy
+          const horaActual = checkDate.getHours();
+          const horariosValidos = horariosDelDia.filter((horario) => {
+            const match = horario.match(/(\d{2}):(\d{2})-(\d{2}):(\d{2})/);
+            if (match) {
+              const horaInicio = parseInt(match[1]);
+              return horaInicio > horaActual;
+            }
+            return false;
+          });
+
+          if (horariosValidos.length > 0) {
+            // Usar el primer horario disponible hoy
+            const match = horariosValidos[0].match(
+              /(\d{2}):(\d{2})-(\d{2}):(\d{2})/
+            );
+            if (match) {
+              return (
+                checkDate.getFullYear() +
+                "-" +
+                String(checkDate.getMonth() + 1).padStart(2, "0") +
+                "-" +
+                String(checkDate.getDate()).padStart(2, "0") +
+                "T" +
+                match[1] +
+                ":00:00"
+              );
+            }
+          }
+        } else {
+          // Para días futuros, usar el primer horario disponible
+          const match = horariosDelDia[0].match(
+            /(\d{2}):(\d{2})-(\d{2}):(\d{2})/
+          );
+          if (match) {
+            return (
+              checkDate.getFullYear() +
+              "-" +
+              String(checkDate.getMonth() + 1).padStart(2, "0") +
+              "-" +
+              String(checkDate.getDate()).padStart(2, "0") +
+              "T" +
+              match[1] +
+              ":00:00"
+            );
+          }
+        }
+      }
+    }
+
+    // Si no se encuentra ningún horario disponible, usar mañana a las 9:00
+    const defaultDate = new Date(now);
+    defaultDate.setDate(defaultDate.getDate() + 1);
+
+    return (
+      defaultDate.getFullYear() +
+      "-" +
+      String(defaultDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(defaultDate.getDate()).padStart(2, "0") +
+      "T09:00:00"
+    );
+  };
+
+  const checkAvailability = async (checkCurrentTime = false) => {
+    if (!medicoId) {
+      setAvailabilityError("ID del médico no disponible");
+      return;
+    }
+
+    if (!medico || !disponibilidad) {
+      return;
+    }
+
+    if (checkingAvailability) {
+      return;
+    }
+
+    try {
+      setCheckingAvailability(true);
+
+      const now = new Date();
+      let fechaHoraToCheck;
+
+      if (checkCurrentTime) {
+        fechaHoraToCheck =
+          now.getFullYear() +
+          "-" +
+          String(now.getMonth() + 1).padStart(2, "0") +
+          "-" +
+          String(now.getDate()).padStart(2, "0") +
+          "T" +
+          String(now.getHours()).padStart(2, "0") +
+          ":" +
+          String(now.getMinutes()).padStart(2, "0") +
+          ":" +
+          String(now.getSeconds()).padStart(2, "0");
+      } else {
+        fechaHoraToCheck = getNextAvailableDateTime();
+      }
+
+      if (!fechaHoraToCheck) {
+        setAvailabilityError("Error generando fecha para verificación");
+        return;
+      }
+
+      const timezoneInfo = {
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        offset: now.getTimezoneOffset(),
+        timestamp: now.getTime(),
+      };
+
+      const availabilityResponse = await checkMedicoAvailability(
+        medicoId,
+        fechaHoraToCheck,
+        timezoneInfo
+      );
+
+      if (availabilityResponse.success) {
+        setIsAvailable(availabilityResponse.data.available);
+        setAvailabilityChecked(true);
+      } else {
+        setIsAvailable(false);
+        setAvailabilityChecked(true);
+      }
+    } catch (error) {
+      setIsAvailable(false);
+      setAvailabilityChecked(true);
+      setAvailabilityError(
+        error.response?.data?.message || error.message || "Error de conexión"
+      );
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const checkAvailabilityForTomorrow = async () => {
+    if (!medicoId) return;
+
+    try {
+      setCheckingAvailability(true);
+
+      const fechaHoraToCheck = getNextAvailableDateTime();
+
+      const availabilityResponse = await checkMedicoAvailability(
+        medicoId,
+        fechaHoraToCheck,
+        {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          offset: new Date().getTimezoneOffset(),
+          timestamp: new Date().getTime(),
+        }
+      );
+
+      if (availabilityResponse.success) {
+        setIsAvailable(availabilityResponse.data.available);
+        setAvailabilityChecked(true);
+      } else {
+        setIsAvailable(false);
+        setAvailabilityChecked(true);
+      }
+    } catch (error) {
+      setIsAvailable(false);
+      setAvailabilityChecked(true);
+      setAvailabilityError(
+        error.response?.data?.message || error.message || "Error de conexión"
+      );
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const checkAvailabilityForToday = async () => {
+    if (!medicoId) return;
+
+    try {
+      setCheckingAvailability(true);
+
+      const fechaHoraToCheck = getNextAvailableDateTime();
+
+      const availabilityResponse = await checkMedicoAvailability(
+        medicoId,
+        fechaHoraToCheck,
+        {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          offset: new Date().getTimezoneOffset(),
+          timestamp: new Date().getTime(),
+        }
+      );
+
+      if (availabilityResponse.success) {
+        setIsAvailable(availabilityResponse.data.available);
+        setAvailabilityChecked(true);
+      } else {
+        setIsAvailable(false);
+        setAvailabilityChecked(true);
+      }
+    } catch (error) {
+      setIsAvailable(false);
+      setAvailabilityChecked(true);
+      setAvailabilityError(
+        error.response?.data?.message || error.message || "Error de conexión"
+      );
+    } finally {
+      setCheckingAvailability(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setAvailabilityError(null);
+    setAvailabilityChecked(false);
     await loadMedicoData();
+    await checkAvailability();
     setRefreshing(false);
   };
 
@@ -131,7 +415,6 @@ const MedicoDetailScreen = ({ route, navigation }) => {
         horariosObj = JSON.parse(horarios);
         // console.log("Horarios parseados desde JSON:", horariosObj);
       } catch (e) {
-        console.error("Error parseando horarios JSON:", e);
         return "Error en formato de horarios";
       }
     } else if (typeof horarios === "object") {
@@ -321,41 +604,69 @@ const MedicoDetailScreen = ({ route, navigation }) => {
           </Text>
         </View>
 
-        {/* Disponibilidad de hoy */}
-        {disponibilidad && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Disponibilidad Hoy</Text>
-            <View style={styles.disponibilidadContainer}>
+        {/* Disponibilidad del médico */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Disponibilidad</Text>
+          <View style={styles.disponibilidadContainer}>
+            {checkingAvailability ? (
+              <Text style={[styles.disponibilidad, { color: colors.gray }]}>
+                Verificando disponibilidad...
+              </Text>
+            ) : availabilityChecked ? (
               <Text
                 style={[
                   styles.disponibilidad,
                   {
-                    color: disponibilidad.disponible
-                      ? colors.success
-                      : colors.error,
+                    color: isAvailable ? colors.success : colors.error,
                   },
                 ]}
               >
-                {disponibilidad.disponible
+                {isAvailable
                   ? "✅ Disponible para citas"
-                  : "❌ No disponible hoy"}
+                  : "❌ No disponible en este momento"}
               </Text>
+            ) : availabilityError ? (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.disponibilidad, { color: colors.error }]}>
+                  ❌ Error verificando disponibilidad
+                </Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={() => {
+                    setAvailabilityError(null);
+                    setAvailabilityChecked(false);
+                    checkAvailability();
+                  }}
+                >
+                  <Text
+                    style={[styles.retryButtonText, { color: colors.primary }]}
+                  >
+                    Reintentar
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={[styles.disponibilidad, { color: colors.gray }]}>
+                Verificando disponibilidad...
+              </Text>
+            )}
 
-              {disponibilidad.horarios_atencion && (
+            {disponibilidad && disponibilidad.horarios_atencion && (
+              <Text style={styles.disponibilidadDetalle}>
+                Horario de atención:{" "}
+                {formatHorarios(disponibilidad.horarios_atencion)}
+              </Text>
+            )}
+
+            {disponibilidad &&
+              disponibilidad.horas_ocupadas &&
+              disponibilidad.horas_ocupadas.length > 0 && (
                 <Text style={styles.disponibilidadDetalle}>
-                  Horario: {formatHorarios(disponibilidad.horarios_atencion)}
+                  Horas ocupadas hoy: {disponibilidad.horas_ocupadas.join(", ")}
                 </Text>
               )}
-
-              {disponibilidad.horas_ocupadas &&
-                disponibilidad.horas_ocupadas.length > 0 && (
-                  <Text style={styles.disponibilidadDetalle}>
-                    Horas ocupadas: {disponibilidad.horas_ocupadas.join(", ")}
-                  </Text>
-                )}
-            </View>
           </View>
-        )}
+        </View>
 
         {/* Botón para agendar cita */}
         {medico.activo && (
@@ -401,18 +712,20 @@ const createStyles = (colors) =>
       borderRadius: 30,
     },
     medicoCard: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 20,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     medicoHeader: {
       flexDirection: "row",
@@ -425,7 +738,7 @@ const createStyles = (colors) =>
     medicoNombre: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
     },
     especialidad: {
@@ -473,18 +786,20 @@ const createStyles = (colors) =>
       fontWeight: "500",
     },
     card: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     cardTitle: {
       fontSize: 18,
@@ -513,6 +828,29 @@ const createStyles = (colors) =>
       fontSize: 14,
       color: colors.gray,
       marginTop: 4,
+    },
+    errorContainer: {
+      gap: 8,
+      alignItems: "center",
+    },
+    buttonContainer: {
+      gap: 8,
+      width: "100%",
+    },
+    retryButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: "currentColor",
+      alignItems: "center",
+    },
+    currentTimeButton: {
+      backgroundColor: "currentColor",
+    },
+    retryButtonText: {
+      fontSize: 14,
+      fontWeight: "600",
     },
     agendarButton: {
       marginTop: 8,

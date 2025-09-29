@@ -187,59 +187,6 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
       <Text style={styles.subtitle}>
         Configura tus preferencias de notificaciones
       </Text>
-
-      {/* Configuración de tipos de notificación */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tipos de Notificación</Text>
-
-        {renderNotificationSetting(
-          "citas_recordatorio",
-          "Recordatorios de Citas",
-          "Recibe notificaciones antes de tus citas programadas"
-        )}
-
-        {renderNotificationSetting(
-          "citas_confirmacion",
-          "Confirmación de Citas",
-          "Notificaciones cuando se confirma o aprueba una cita"
-        )}
-
-        {renderNotificationSetting(
-          "citas_cancelacion",
-          "Cancelación de Citas",
-          "Alertas cuando se cancela una cita"
-        )}
-
-        {renderNotificationSetting(
-          "resultados_disponibles",
-          "Resultados Disponibles",
-          "Notificaciones cuando tus resultados médicos están listos"
-        )}
-
-        {renderNotificationSetting(
-          "mensajes_sistema",
-          "Mensajes del Sistema",
-          "Notificaciones administrativas y de mantenimiento"
-        )}
-      </View>
-
-      {/* Configuración de horarios */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Horario de Notificaciones</Text>
-        <Text style={styles.sectionDescription}>
-          Las notificaciones solo se enviarán durante este horario
-        </Text>
-
-        <View style={styles.timeContainer}>
-          {renderTimeSetting("hora_inicio", "Hora de Inicio")}
-          {renderTimeSetting("hora_fin", "Hora de Fin")}
-        </View>
-
-        <Text style={styles.timezoneText}>
-          Zona horaria: {configuracion.zona_horaria}
-        </Text>
-      </View>
-
       {/* Configuración de Tema */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Apariencia</Text>
@@ -297,17 +244,40 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
+      {/* Configuración de tipos de notificación */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Tipos de Notificación</Text>
 
-      {/* Información adicional */}
-      <View style={styles.infoSection}>
-        <Text style={styles.infoTitle}>ℹ️ Información</Text>
-        <Text style={styles.infoText}>
-          • Las notificaciones se envían por push y email{"\n"}• Puedes cambiar
-          estas configuraciones en cualquier momento{"\n"}• Los cambios se
-          aplican inmediatamente
-        </Text>
+        {renderNotificationSetting(
+          "citas_recordatorio",
+          "Recordatorios de Citas",
+          "Recibe notificaciones antes de tus citas programadas"
+        )}
+
+        {renderNotificationSetting(
+          "citas_confirmacion",
+          "Confirmación de Citas",
+          "Notificaciones cuando se confirma o aprueba una cita"
+        )}
+
+        {renderNotificationSetting(
+          "citas_cancelacion",
+          "Cancelación de Citas",
+          "Alertas cuando se cancela una cita"
+        )}
+
+        {renderNotificationSetting(
+          "resultados_disponibles",
+          "Resultados Disponibles",
+          "Notificaciones cuando tus resultados médicos están listos"
+        )}
+
+        {renderNotificationSetting(
+          "mensajes_sistema",
+          "Mensajes del Sistema",
+          "Notificaciones administrativas y de mantenimiento"
+        )}
       </View>
-
       {/* Botón de guardar */}
       {hasUnsavedChanges && (
         <View style={styles.saveSection}>
@@ -339,7 +309,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       textAlign: "center",
       marginBottom: 8,
     },
@@ -350,18 +320,20 @@ const createStyles = (colors) =>
       marginBottom: 24,
     },
     section: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
       padding: 16,
       marginBottom: 16,
-      shadowColor: colors.black,
+      shadowColor: colors.shadow || colors.black,
       shadowOffset: {
         width: 0,
         height: 2,
       },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     sectionTitle: {
       fontSize: 18,
@@ -413,11 +385,12 @@ const createStyles = (colors) =>
     timeInput: {
       flex: 1,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       borderRadius: 8,
       padding: 12,
       fontSize: 16,
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
+      color: colors.text,
     },
     timezoneText: {
       fontSize: 14,
@@ -444,6 +417,7 @@ const createStyles = (colors) =>
     saveSection: {
       marginTop: 8,
       marginBottom: 20,
+      backgroundColor: colors.background,
     },
     saveButton: {
       backgroundColor: colors.success,
@@ -470,9 +444,9 @@ const createStyles = (colors) =>
       paddingHorizontal: 16,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       alignItems: "center",
-      backgroundColor: colors.surface,
+      backgroundColor: colors.input || colors.surface,
     },
     selectedThemeOption: {
       backgroundColor: colors.primary,

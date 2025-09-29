@@ -119,7 +119,7 @@ const createStyles = (colors) =>
     hospitalTitle: {
       fontSize: 32,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       textAlign: "center",
       marginBottom: 8,
       letterSpacing: 1,

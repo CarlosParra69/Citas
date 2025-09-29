@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Appearance, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+let useColorScheme;
+try {
+  // Try to import useColorScheme hook from React Native
+  const { useColorScheme: rnUseColorScheme } = require("react-native");
+  useColorScheme = () => {
+    try {
+      const scheme = rnUseColorScheme();
+      return scheme || "light";
+    } catch (error) {
+      console.error("Error using useColorScheme:", error);
+      return "light";
+    }
+  };
+} catch (error) {
+  console.error("Error importing useColorScheme:", error);
+  useColorScheme = () => "light";
+}
 
 const ThemeContext = createContext({
   theme: "light",
@@ -15,12 +32,43 @@ const ThemeContext = createContext({
 });
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  return context;
+  try {
+    const context = useContext(ThemeContext);
+    if (!context) {
+      console.warn(
+        "useTheme: ThemeContext not found, returning default values"
+      );
+      return {
+        theme: "light",
+        isDark: false,
+        isLight: true,
+        isSystem: false,
+        isLoading: false,
+        toggleTheme: async () => {},
+        setLightTheme: async () => {},
+        setDarkTheme: async () => {},
+        setSystemTheme: async () => {},
+      };
+    }
+    return context;
+  } catch (error) {
+    console.error("Error in useTheme hook:", error);
+    return {
+      theme: "light",
+      isDark: false,
+      isLight: true,
+      isSystem: false,
+      isLoading: false,
+      toggleTheme: async () => {},
+      setLightTheme: async () => {},
+      setDarkTheme: async () => {},
+      setSystemTheme: async () => {},
+    };
+  }
 };
 
 export const ThemeProvider = ({ children }) => {
-  const systemColorScheme = useColorScheme();
+  const systemColorScheme = useColorScheme() || "light"; // Fallback to light if undefined
   const [theme, setTheme] = useState("light"); // Start with light theme as default
   const [isLoading] = useState(false); // Always false, don't block rendering
 
@@ -30,11 +78,15 @@ export const ThemeProvider = ({ children }) => {
 
   const loadThemePreference = async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem("theme");
-      if (savedTheme) {
-        setTheme(savedTheme);
+      if (typeof AsyncStorage !== "undefined" && AsyncStorage.getItem) {
+        const savedTheme = await AsyncStorage.getItem("theme");
+        if (savedTheme) {
+          setTheme(savedTheme);
+        } else {
+          // Si no hay preferencia guardada, usar el del sistema
+          setTheme(systemColorScheme || "light");
+        }
       } else {
-        // Si no hay preferencia guardada, usar el del sistema
         setTheme(systemColorScheme || "light");
       }
     } catch (error) {

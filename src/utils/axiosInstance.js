@@ -11,12 +11,18 @@ const axiosInstance = axios.create({
 // Interceptor para agregar el token JWT
 axiosInstance.interceptors.request.use(
   async (config) => {
-    const token = await AsyncStorage.getItem("token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      // console.log(`Enviando token para ${config.method?.toUpperCase()} ${config.url} - Token: ${token.substring(0, 20)}...`);
-    } else {
-      // console.log(`No hay token para ${config.method?.toUpperCase()} ${config.url}`);
+    try {
+      if (typeof AsyncStorage !== "undefined" && AsyncStorage.getItem) {
+        const token = await AsyncStorage.getItem("token");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          // console.log(`Enviando token para ${config.method?.toUpperCase()} ${config.url} - Token: ${token.substring(0, 20)}...`);
+        } else {
+          // console.log(`No hay token para ${config.method?.toUpperCase()} ${config.url}`);
+        }
+      }
+    } catch (error) {
+      console.error("Error getting token in axios interceptor:", error);
     }
     return config;
   },
@@ -82,7 +88,16 @@ axiosInstance.interceptors.response.use(
         errorCode === "TOKEN_ABSENT"
       ) {
         // console.log("Eliminando token por error de autenticación");
-        await AsyncStorage.removeItem("token");
+        try {
+          if (typeof AsyncStorage !== "undefined" && AsyncStorage.removeItem) {
+            await AsyncStorage.removeItem("token");
+          }
+        } catch (storageError) {
+          console.error(
+            "Error removing token in axios interceptor:",
+            storageError
+          );
+        }
       }
     }
 

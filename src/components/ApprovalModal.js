@@ -12,7 +12,24 @@ import ButtonPrimary from "./ButtonPrimary";
 import { useThemeColors } from "../utils/themeColors";
 
 const ApprovalModal = ({ visible, onClose, onApprove, cita }) => {
-  const colors = useThemeColors();
+  let colors;
+
+  try {
+    colors = useThemeColors();
+  } catch (error) {
+    console.error("Error in ApprovalModal useThemeColors:", error);
+    colors = {
+      background: "#F9F9F9",
+      primary: "#FF6B35",
+      text: "#1C1C1E",
+      error: "#FF3B30",
+      gray: "#8E8E93",
+      white: "#FFFFFF",
+      border: "#C6C6C8",
+      success: "#34C759",
+    };
+  }
+
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [observaciones, setObservaciones] = useState("");
   const [loading, setLoading] = useState(false);

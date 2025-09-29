@@ -129,7 +129,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 26,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
       textAlign: "center",
     },

@@ -22,8 +22,10 @@ const StatCard = ({ title, value, subtitle, icon, color, style }) => {
 const createStyles = (colors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: colors.white,
+      backgroundColor: colors.card || colors.surface,
       borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
       padding: 16,
       borderLeftWidth: 4,
       shadowColor: colors.black,

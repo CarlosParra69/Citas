@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useCitas } from "../../context/CitasContext";
+import { useAuthContext } from "../../context/AuthContext";
 import CardItem from "../../components/CardItem";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { formatTime } from "../../utils/formatDate";
@@ -15,8 +17,17 @@ import { useThemeColors } from "../../utils/themeColors";
 
 const CitasHoyScreen = ({ navigation }) => {
   const colors = useThemeColors();
-  const styles = createStyles(colors);
-  const { citasHoy, loading, error, fetchCitasHoy, clearError } = useCitas();
+  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const { user } = useAuthContext();
+  const {
+    citasHoy,
+    loading,
+    error,
+    fetchCitasHoy,
+    clearError,
+    atenderCitaPendiente,
+    completarCitaPendiente,
+  } = useCitas();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -32,7 +43,7 @@ const CitasHoyScreen = ({ navigation }) => {
 
   const loadCitasHoy = async () => {
     try {
-      await fetchCitasHoy();
+      await fetchCitasHoy(user);
     } catch (err) {
       console.error("Error loading citas hoy:", err);
     }
@@ -42,6 +53,37 @@ const CitasHoyScreen = ({ navigation }) => {
     setRefreshing(true);
     await loadCitasHoy();
     setRefreshing(false);
+  };
+
+  const handleAtenderPaciente = async (citaId) => {
+    Alert.alert(
+      "Atender Paciente",
+      "¿Confirma que va a atender al paciente ahora?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Atender",
+          onPress: async () => {
+            try {
+              await atenderCitaPendiente(citaId);
+              Alert.alert(
+                "Éxito",
+                "Paciente siendo atendido. Complete la valoración.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () =>
+                      navigation.navigate("ValoracionScreen", { citaId }),
+                  },
+                ]
+              );
+            } catch (error) {
+              Alert.alert("Error", "No se pudo cambiar el estado de la cita");
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getEstadoColor = (estado) => {
@@ -82,15 +124,33 @@ const CitasHoyScreen = ({ navigation }) => {
     );
 
     return (
-      <CardItem
-        key={cita.id}
-        title={`${hora} - ${medicoNombre}`}
-        subtitle={cita.motivo_consulta}
-        onPress={() =>
-          navigation.navigate("DetalleCitaScreen", { citaId: cita.id })
-        }
-        rightContent={estadoBadge}
-      />
+      <View key={cita.id} style={styles.citaContainer}>
+        <CardItem
+          title={`${hora} - ${medicoNombre}`}
+          subtitle={cita.motivo_consulta}
+          onPress={() =>
+            navigation.navigate("DetalleCitaScreen", { citaId: cita.id })
+          }
+          rightContent={estadoBadge}
+        />
+        {cita.estado === "programada" || cita.estado === "confirmada" ? (
+          <TouchableOpacity
+            style={styles.atenderButton}
+            onPress={() => handleAtenderPaciente(cita.id)}
+          >
+            <Text style={styles.atenderButtonText}>Atender Paciente</Text>
+          </TouchableOpacity>
+        ) : cita.estado === "en_curso" ? (
+          <TouchableOpacity
+            style={styles.volverButton}
+            onPress={() =>
+              navigation.navigate("ValoracionScreen", { citaId: cita.id })
+            }
+          >
+            <Text style={styles.volverButtonText}>Continuar Valoración</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
     );
   };
 
@@ -184,6 +244,36 @@ const createStyles = (colors) =>
       fontSize: 12,
       fontWeight: "600",
       textTransform: "capitalize",
+    },
+    citaContainer: {
+      marginHorizontal: 16,
+      marginVertical: 4,
+    },
+    atenderButton: {
+      backgroundColor: colors.success,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      marginTop: 8,
+      alignItems: "center",
+    },
+    atenderButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "bold",
+    },
+    volverButton: {
+      backgroundColor: colors.warning,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      marginTop: 8,
+      alignItems: "center",
+    },
+    volverButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: "600",
     },
   });
 

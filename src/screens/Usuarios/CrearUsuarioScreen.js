@@ -320,7 +320,7 @@ const createStyles = (colors) =>
     title: {
       fontSize: 24,
       fontWeight: "bold",
-      color: colors.primary,
+      color: colors.text,
       marginBottom: 8,
       textAlign: "center",
     },
@@ -332,6 +332,19 @@ const createStyles = (colors) =>
     },
     section: {
       marginBottom: 24,
+      backgroundColor: colors.card || colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     sectionTitle: {
       fontSize: 18,
@@ -358,9 +371,9 @@ const createStyles = (colors) =>
       paddingHorizontal: 16,
       borderRadius: 8,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.border,
       alignItems: "center",
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
     },
     activeRoleButton: {
       backgroundColor: colors.primary,

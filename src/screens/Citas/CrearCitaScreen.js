@@ -14,10 +14,15 @@ import MiniCalendario from "../../components/MiniCalendario";
 import { useCitas } from "../../context/CitasContext";
 import { useAuthContext } from "../../context/AuthContext";
 import { getEspecialidades } from "../../api/especialidades";
-import { getMedicos, getMedicoDisponibilidad } from "../../api/medicos";
+import {
+  getMedicos,
+  getMedicoDisponibilidad,
+  checkMedicoAvailability,
+} from "../../api/medicos";
 import { getPacientes } from "../../api/pacientes";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
+import { formatDateTimeForAPI, isDateTimeFuture } from "../../utils/formatDate";
 
 const CrearCitaScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -126,9 +131,14 @@ const CrearCitaScreen = ({ navigation }) => {
 
     try {
       setCheckingAvailability(true);
-      const availabilityResponse = await getMedicoDisponibilidad(
+      const availabilityResponse = await checkMedicoAvailability(
         formData.medico_id,
-        fechaHoraToCheck
+        fechaHoraToCheck,
+        {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          offset: new Date().getTimezoneOffset(),
+          timestamp: new Date().getTime(),
+        }
       );
 
       if (availabilityResponse.success) {
@@ -167,9 +177,9 @@ const CrearCitaScreen = ({ navigation }) => {
       newErrors.fecha_hora = "Selecciona fecha y hora en el calendario";
     } else {
       const fechaCita = new Date(formData.fecha_hora);
-      const ahora = new Date();
-      if (fechaCita <= ahora) {
-        newErrors.fecha_hora = "La fecha debe ser futura";
+      if (!isDateTimeFuture(fechaCita, 30)) {
+        newErrors.fecha_hora =
+          "La fecha debe ser futura (mínimo 30 minutos de anticipación)";
       }
     }
 
@@ -192,7 +202,8 @@ const CrearCitaScreen = ({ navigation }) => {
     try {
       // Determinar el estado inicial basado en el rol del usuario
       const isMedico = user?.rol === "medico";
-      const estadoInicial = isMedico ? "confirmada" : "programada";
+      const isPaciente = user?.rol === "paciente";
+      const estadoInicial = isMedico ? "programada" : "pendiente_aprobacion";
 
       const citaData = {
         paciente_id: isMedico
@@ -210,7 +221,7 @@ const CrearCitaScreen = ({ navigation }) => {
 
       const mensaje = isMedico
         ? "Cita creada y aprobada exitosamente"
-        : "Cita creada exitosamente. Pendiente de aprobación médica";
+        : "Solicitud de cita enviada exitosamente. Pendiente de aprobación médica";
 
       Alert.alert("Cita Creada", mensaje, [
         {
@@ -219,7 +230,6 @@ const CrearCitaScreen = ({ navigation }) => {
         },
       ]);
     } catch (error) {
-      console.error("Error creating cita:", error);
       Alert.alert("Error", "No se pudo crear la cita. Inténtalo de nuevo.");
     }
   };
@@ -233,7 +243,10 @@ const CrearCitaScreen = ({ navigation }) => {
 
   const handleDateSelect = (dateTime) => {
     setSelectedDateTime(dateTime);
-    const isoString = dateTime.toISOString();
+
+    // Usar la función de utilidad para formatear la fecha correctamente
+    const isoString = formatDateTimeForAPI(dateTime);
+
     setFormData((prev) => ({ ...prev, fecha_hora: isoString }));
 
     if (errors.fecha_hora) {
@@ -301,7 +314,7 @@ const CrearCitaScreen = ({ navigation }) => {
       )}
 
       {/* Selector de Especialidad */}
-      <Text style={styles.label}>Especialidad *</Text>
+      <Text style={styles.label}>Especialidad</Text>
       <View style={styles.pickerContainer}>
         {especialidades.map((especialidad) => (
           <TouchableOpacity
@@ -331,7 +344,7 @@ const CrearCitaScreen = ({ navigation }) => {
       {/* Selector de Médico */}
       {selectedEspecialidad && (
         <>
-          <Text style={styles.label}>Médico *</Text>
+          <Text style={styles.label}>Médico</Text>
           <View style={styles.pickerContainer}>
             {medicos.length === 0 ? (
               <Text style={styles.noDataText}>No hay médicos disponibles</Text>
@@ -368,7 +381,7 @@ const CrearCitaScreen = ({ navigation }) => {
       )}
 
       {/* Calendario para seleccionar fecha y hora */}
-      <Text style={styles.label}>Fecha y Hora *</Text>
+      <Text style={styles.label}>Fecha y Hora</Text>
       <MiniCalendario
         selectedDate={selectedDateTime}
         onDateSelect={handleDateSelect}
@@ -380,6 +393,10 @@ const CrearCitaScreen = ({ navigation }) => {
         }}
         isAvailable={isAvailable}
         checkingAvailability={checkingAvailability}
+        onAvailabilityResult={(available) => {
+          setIsAvailable(available);
+          setAvailabilityChecked(true);
+        }}
       />
       {errors.fecha_hora && (
         <Text style={styles.errorText}>{errors.fecha_hora}</Text>
@@ -450,7 +467,7 @@ const createStyles = (colors) =>
       borderColor: colors.border,
       borderRadius: 8,
       marginBottom: 8,
-      backgroundColor: colors.white,
+      backgroundColor: colors.input || colors.surface,
     },
     selectedOption: {
       backgroundColor: colors.primary,
