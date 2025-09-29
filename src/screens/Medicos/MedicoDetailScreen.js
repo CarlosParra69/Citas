@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import {
   getMedicoById,
   getMedicoDisponibilidad,
@@ -613,51 +614,49 @@ const MedicoDetailScreen = ({ route, navigation }) => {
                 Verificando disponibilidad...
               </Text>
             ) : availabilityChecked ? (
-              <Text
-                style={[
-                  styles.disponibilidad,
-                  {
-                    color: isAvailable ? colors.success : colors.error,
-                  },
-                ]}
-              >
-                {isAvailable
-                  ? "✅ Disponible para citas"
-                  : "❌ No disponible en este momento"}
-              </Text>
-            ) : availabilityError ? (
-              <View style={styles.errorContainer}>
-                <Text style={[styles.disponibilidad, { color: colors.error }]}>
-                  ❌ Error verificando disponibilidad
-                </Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={() => {
-                    setAvailabilityError(null);
-                    setAvailabilityChecked(false);
-                    checkAvailability();
-                  }}
+              <View style={styles.disponibilidadRow}>
+                <Ionicons
+                  name={isAvailable ? "checkmark-circle" : "close-circle"}
+                  size={20}
+                  color={isAvailable ? colors.success : colors.error}
+                  style={styles.disponibilidadIcon}
+                />
+                <Text
+                  style={[
+                    styles.disponibilidad,
+                    {
+                      color: isAvailable ? colors.success : colors.error,
+                    },
+                  ]}
                 >
-                  <Text
-                    style={[styles.retryButtonText, { color: colors.primary }]}
-                  >
-                    Reintentar
-                  </Text>
-                </TouchableOpacity>
+                  {isAvailable
+                    ? "Disponible para citas"
+                    : "No disponible en este momento"}
+                </Text>
+              </View>
+            ) : availabilityError ? (
+              <View style={styles.disponibilidadRow}>
+                <Ionicons
+                  name="close-circle"
+                  size={20}
+                  color={colors.error}
+                  style={styles.disponibilidadIcon}
+                />
+                <Text style={[styles.disponibilidad, { color: colors.error }]}>
+                  Error verificando disponibilidad
+                </Text>
               </View>
             ) : (
               <Text style={[styles.disponibilidad, { color: colors.gray }]}>
                 Verificando disponibilidad...
               </Text>
             )}
-
             {disponibilidad && disponibilidad.horarios_atencion && (
               <Text style={styles.disponibilidadDetalle}>
                 Horario de atención:{" "}
                 {formatHorarios(disponibilidad.horarios_atencion)}
               </Text>
             )}
-
             {disponibilidad &&
               disponibilidad.horas_ocupadas &&
               disponibilidad.horas_ocupadas.length > 0 && (
@@ -823,6 +822,14 @@ const createStyles = (colors) =>
     disponibilidad: {
       fontSize: 16,
       fontWeight: "500",
+    },
+    disponibilidadRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    disponibilidadIcon: {
+      marginRight: 4,
     },
     disponibilidadDetalle: {
       fontSize: 14,

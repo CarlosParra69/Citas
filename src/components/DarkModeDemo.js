@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useThemeColors } from "../utils/themeColors";
 import { useDarkModeColors } from "../utils/darkModeUtils";
 
@@ -113,9 +114,17 @@ const DarkModeDemo = () => {
       {demoCards.map(renderDemoCard)}
 
       <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
-        <Text style={[styles.infoTitle, { color: colors.primary }]}>
-          💡 Características del Nuevo Modo Oscuro
-        </Text>
+        <View style={styles.infoTitleContainer}>
+          <Ionicons
+            name="bulb"
+            size={20}
+            color={colors.primary}
+            style={styles.bulbIcon}
+          />
+          <Text style={[styles.infoTitle, { color: colors.primary }]}>
+            Características del Nuevo Modo Oscuro
+          </Text>
+        </View>
         <Text style={[styles.infoText, { color: colors.text }]}>
           • Paleta completamente negra y gris oscura{"\n"}• Sin colores naranjas
           en modo oscuro{"\n"}• Máximo contraste para vista reducida
@@ -197,10 +206,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 20,
   },
+  infoTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   infoTitle: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 12,
+  },
+  bulbIcon: {
+    marginRight: 8,
   },
   infoText: {
     fontSize: 16,

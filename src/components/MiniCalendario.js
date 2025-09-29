@@ -9,6 +9,7 @@ import {
   Alert,
   Picker,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useThemeColors } from "../utils/themeColors";
 import { getMedicoDisponibilidad } from "../api/medicos";
 import { formatDateTimeForAPI } from "../utils/formatDate";
@@ -426,7 +427,13 @@ const MiniCalendario = ({
     if (medicoHorarios.length === 0) {
       return (
         <View style={styles.noSlotsContainer}>
-          <Text style={styles.noSlotsText}>⚠️ Sin Horarios Disponibles</Text>
+          <Ionicons
+            name="warning"
+            size={24}
+            color={colors.warning || colors.gray}
+            style={styles.warningIcon}
+          />
+          <Text style={styles.noSlotsText}>Sin Horarios Disponibles</Text>
           <Text style={styles.noSlotsSubtext}>
             No se pudieron cargar los horarios del médico.
           </Text>
@@ -520,8 +527,14 @@ const MiniCalendario = ({
             style={styles.openModalButton}
             onPress={() => setShowTimePicker(true)}
           >
+            <Ionicons
+              name="time"
+              size={16}
+              color={colors.white}
+              style={styles.timeIcon}
+            />
             <Text style={styles.openModalButtonText}>
-              🕐 Ver Horarios Disponibles ({medicoHorarios.length})
+              Ver Horarios Disponibles ({medicoHorarios.length})
             </Text>
           </TouchableOpacity>
 
@@ -555,25 +568,40 @@ const MiniCalendario = ({
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              🕐 Selecciona una Hora -{" "}
-              {tempDateTime?.toLocaleDateString("es-ES", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
+            <View style={styles.modalTitleContainer}>
+              <Ionicons
+                name="time"
+                size={20}
+                color={colors.text}
+                style={styles.timeIcon}
+              />
+              <Text style={styles.modalTitle}>
+                Selecciona una Hora -{" "}
+                {tempDateTime?.toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
 
-            <Text style={styles.modalDate}>
-              📅{" "}
-              {tempDateTime?.toLocaleDateString("es-ES", {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </Text>
+            <View style={styles.modalDateContainer}>
+              <Ionicons
+                name="calendar"
+                size={20}
+                color={colors.text}
+                style={styles.calendarIcon}
+              />
+              <Text style={styles.modalDate}>
+                {tempDateTime?.toLocaleDateString("es-ES", {
+                  weekday: "long",
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </Text>
+            </View>
 
             {renderTimeSlots()}
 
@@ -736,19 +764,35 @@ const createStyles = (colors) =>
       borderWidth: 2,
       borderColor: colors.border,
     },
+    modalTitleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 12,
+    },
     modalTitle: {
       fontSize: 20,
       fontWeight: "600",
       color: colors.text,
       textAlign: "center",
-      marginBottom: 12,
+    },
+    timeIcon: {
+      marginRight: 8,
+    },
+    modalDateContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 16,
     },
     modalDate: {
       fontSize: 18,
       fontWeight: "500",
       color: colors.text,
       textAlign: "center",
-      marginBottom: 16,
+    },
+    calendarIcon: {
+      marginRight: 8,
     },
     // Estilos de modalStatus eliminados - ya no se usa
     timeSlotsContainer: {
@@ -833,6 +877,9 @@ const createStyles = (colors) =>
       textAlign: "center",
       marginTop: 8,
       opacity: 0.7,
+    },
+    warningIcon: {
+      marginBottom: 8,
     },
     closeButton: {
       marginTop: 24,

@@ -1,7 +1,7 @@
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import UsuariosScreen from "../screens/Usuarios/UsuariosScreen";
-import CrearUsuarioScreen from "../screens/Usuarios/CrearUsuarioScreen";
+import UsuariosScreen from "../screens/Auth/UsuariosScreen";
+import CrearUsuarioScreen from "../screens/Auth/CrearUsuarioScreen";
 import GestionMedicosScreen from "../screens/Medicos/GestionMedicosScreen";
 import GestionEspecialidadesScreen from "../screens/Especialidades/GestionEspecialidadesScreen";
 import GestionPacientesScreen from "../screens/Pacientes/GestionPacientesScreen";

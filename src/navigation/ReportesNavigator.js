@@ -1,10 +1,10 @@
 import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
-import DashboardScreen from "../screens/Reportes/DashboardScreen";
-import MedicosMasCitasScreen from "../screens/Reportes/MedicosMasCitasScreen";
-import PatronesCitasScreen from "../screens/Reportes/PatronesCitasScreen";
+import DashboardScreen from "../screens/Dashboard/DashboardScreen";
+import MedicosMasCitasScreen from "../screens/Dashboard/MedicosMasCitasScreen";
+import PatronesCitasScreen from "../screens/Dashboard/PatronesCitasScreen";
 import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
-import MisEstadisticasScreen from "../screens/Estadisticas/MisEstadisticasScreen";
+import MisEstadisticasScreen from "../screens/Dashboard/MisEstadisticasScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();

@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../context/AuthContext";
 import { createPaciente } from "../../api/pacientes";
 import { uploadAvatar } from "../../api/avatar";
@@ -342,17 +343,13 @@ const CrearPacienteScreen = ({ navigation }) => {
               />
             ) : (
               <View style={[styles.avatar, { backgroundColor: colors.info }]}>
-                <Text style={[styles.avatarText, { color: colors.white }]}>
-                  👤
-                </Text>
+                <Ionicons name="person" size={32} color={colors.white} />
               </View>
             )}
             <View
               style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
             >
-              <Text style={[styles.cameraIconText, { color: colors.white }]}>
-                📷
-              </Text>
+              <Ionicons name="camera" size={12} color={colors.white} />
             </View>
           </TouchableOpacity>
           <Text style={[styles.profileImageHint, { color: colors.gray }]}>

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthContext } from "../../context/AuthContext";
-import { getHistorialMedico } from "../../api/pacientes";
+import { getPacienteHistorial } from "../../api/pacientes";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
@@ -18,9 +18,12 @@ import { formatDate } from "../../utils/formatDate";
 const HistorialMedicoScreen = ({ route, navigation }) => {
   const colors = useThemeColors();
   const globalStyles = useGlobalStyles();
-  const { pacienteId } = route.params;
+  const { pacienteId } = route.params || {};
   const { user } = useAuthContext();
   const styles = createStyles(colors);
+
+  // Si no viene pacienteId en los params, usar el ID del paciente actual
+  const targetPacienteId = pacienteId || user?.paciente_id || user?.id;
 
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,11 +35,41 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
   useFocusEffect(
     React.useCallback(() => {
       if (user?.rol === "medico") {
-        loadHistorialMedico();
+        // Los médicos necesitan un pacienteId específico
+        if (targetPacienteId && targetPacienteId !== user?.id) {
+          loadHistorialMedico();
+        } else {
+          Alert.alert(
+            "Paciente requerido",
+            "Selecciona un paciente para ver su historial médico",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+        }
+      } else if (user?.rol === "paciente") {
+        // Los pacientes pueden ver su propio historial
+        if (targetPacienteId) {
+          loadHistorialMedico();
+        } else {
+          Alert.alert(
+            "Error",
+            "No se pudo obtener tu información de paciente",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.goBack(),
+              },
+            ]
+          );
+        }
       } else {
         Alert.alert(
           "Acceso Denegado",
-          "Solo los médicos pueden acceder al historial médico",
+          "No tienes permisos para acceder al historial médico",
           [
             {
               text: "OK",
@@ -45,22 +78,29 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
           ]
         );
       }
-    }, [user, pacienteId])
+    }, [user, targetPacienteId])
   );
 
   const loadHistorialMedico = async () => {
     try {
       setLoading(true);
-      const response = await getHistorialMedico(pacienteId);
+      // Cargar historial médico
+
+      const response = await getPacienteHistorial(targetPacienteId);
 
       if (response.success) {
-        setHistorial(response.data.citas || []);
-        setPacienteInfo(response.data.paciente);
+        console.log("✅ Historial médico cargado:", response);
+        // El backend devuelve datos bajo la propiedad 'data'
+        const historialData = response.data?.data || response.data || {};
+        setHistorial(
+          historialData.historial_citas || historialData.citas || []
+        );
+        setPacienteInfo(historialData.paciente);
       } else {
         Alert.alert("Error", "No se pudo cargar el historial médico");
       }
     } catch (error) {
-      console.error("Error loading historial medico:", error);
+      console.error("❌ Error loading historial medico:", error);
       Alert.alert("Error", "No se pudo cargar el historial médico");
     } finally {
       setLoading(false);

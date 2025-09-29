@@ -10,9 +10,11 @@ import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
 import ActivityFeed from "../../components/ActivityFeed";
 import { useThemeColors } from "../../utils/themeColors";
+import { useAuthContext } from "../../context/AuthContext";
 
 const PacienteDashboard = ({ dashboardData, navigation }) => {
   const colors = useThemeColors();
+  const { user } = useAuthContext();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   // Mock data - en producción vendría de la API
   const mockActivities = [
@@ -37,17 +39,24 @@ const PacienteDashboard = ({ dashboardData, navigation }) => {
     {
       title: "Agendar Cita",
       subtitle: "Programar nueva consulta médica",
-      onPress: () => navigation.navigate("CrearCitaScreen"),
+      onPress: () =>
+        navigation.navigate("Citas", { screen: "CrearCitaScreen" }),
     },
     {
       title: "Mis Citas",
       subtitle: "Ver citas programadas y historial",
-      onPress: () => navigation.navigate("CitasScreen"),
+      onPress: () => navigation.navigate("Citas", { screen: "CitasMain" }),
     },
     {
       title: "Mi Historial",
       subtitle: "Ver historial médico completo",
-      onPress: () => navigation.navigate("HistorialMedicoScreen"),
+      onPress: () => {
+        const pacienteId = user?.paciente_id || user?.id;
+        navigation.navigate("Médicos", {
+          screen: "HistorialMedicoScreen",
+          params: { pacienteId },
+        });
+      },
     },
   ];
 
@@ -92,20 +101,6 @@ const PacienteDashboard = ({ dashboardData, navigation }) => {
                   </Text>
                 </View>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-      {/* Recordatorios */}
-      {dashboardData?.recordatorios &&
-        dashboardData.recordatorios.length > 0 && (
-          <View style={styles.remindersSection}>
-            <Text style={styles.sectionTitle}>Recordatorios</Text>
-            {dashboardData.recordatorios.map((recordatorio, index) => (
-              <View key={index} style={styles.reminderItem}>
-                <View style={styles.reminderDot} />
-                <Text style={styles.reminderText}>{recordatorio.mensaje}</Text>
-              </View>
             ))}
           </View>
         )}
@@ -216,37 +211,6 @@ const createStyles = (colors) =>
     appointmentTime: {
       fontSize: 12,
       color: colors.gray,
-    },
-    remindersSection: {
-      backgroundColor: colors.white,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 24,
-      shadowColor: colors.black,
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    reminderItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginBottom: 8,
-    },
-    reminderDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.warning,
-      marginRight: 12,
-    },
-    reminderText: {
-      fontSize: 14,
-      color: colors.text,
-      flex: 1,
     },
     statsSection: {
       marginBottom: 24,

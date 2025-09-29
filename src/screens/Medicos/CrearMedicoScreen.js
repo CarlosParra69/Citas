@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../context/AuthContext";
 import { getEspecialidades } from "../../api/especialidades";
 import { createMedico, updateMedico } from "../../api/medicos";
@@ -141,7 +142,12 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
                   style={componentStyles.timeButton}
                   onPress={() => openTimePicker(dia.key, index, "inicio")}
                 >
-                  <Text style={componentStyles.timeButtonIcon}>🕐</Text>
+                  <Ionicons
+                    name="time"
+                    size={16}
+                    color={colors.text}
+                    style={componentStyles.timeButtonIcon}
+                  />
                   <Text style={componentStyles.timeButtonText}>
                     {formatTime(horario.inicio)}
                   </Text>
@@ -153,7 +159,12 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
                   style={componentStyles.timeButton}
                   onPress={() => openTimePicker(dia.key, index, "fin")}
                 >
-                  <Text style={componentStyles.timeButtonIcon}>🕐</Text>
+                  <Ionicons
+                    name="time"
+                    size={16}
+                    color={colors.text}
+                    style={componentStyles.timeButtonIcon}
+                  />
                   <Text style={componentStyles.timeButtonText}>
                     {formatTime(horario.fin)}
                   </Text>
@@ -173,7 +184,12 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
             style={componentStyles.addButton}
             onPress={() => addHorario(dia.key)}
           >
-            <Text style={componentStyles.addButtonIcon}>⏰</Text>
+            <Ionicons
+              name="add-circle"
+              size={16}
+              color={colors.white}
+              style={componentStyles.addButtonIcon}
+            />
             <Text style={componentStyles.addButtonText}>Agregar horario</Text>
           </TouchableOpacity>
         </View>
@@ -644,17 +660,13 @@ const CrearMedicoScreen = ({ navigation, route }) => {
                 />
               ) : (
                 <View style={[styles.avatar, { backgroundColor: colors.info }]}>
-                  <Text style={[styles.avatarText, { color: colors.white }]}>
-                    👤
-                  </Text>
+                  <Ionicons name="person" size={32} color={colors.white} />
                 </View>
               )}
               <View
                 style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
               >
-                <Text style={[styles.cameraIconText, { color: colors.white }]}>
-                  📷
-                </Text>
+                <Ionicons name="camera" size={12} color={colors.white} />
               </View>
             </TouchableOpacity>
             <Text style={[styles.profileImageHint, { color: colors.gray }]}>

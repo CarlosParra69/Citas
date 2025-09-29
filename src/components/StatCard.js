@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useThemeColors } from "../utils/themeColors";
 
 const StatCard = ({ title, value, subtitle, icon, color, style }) => {
@@ -9,7 +10,11 @@ const StatCard = ({ title, value, subtitle, icon, color, style }) => {
 
   return (
     <View style={[styles.card, { borderLeftColor: cardColor }, style]}>
-      {icon && <View style={styles.iconContainer}>{icon}</View>}
+      {icon && (
+        <View style={styles.iconContainer}>
+          <Ionicons name={icon} size={24} color={cardColor} />
+        </View>
+      )}
       <View style={styles.content}>
         <Text style={[styles.value, { color: cardColor }]}>{value}</Text>
         <Text style={styles.title}>{title}</Text>

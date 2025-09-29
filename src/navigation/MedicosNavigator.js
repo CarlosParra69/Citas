@@ -3,6 +3,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import MedicosScreen from "../screens/Medicos/MedicosScreen";
 import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
 import CrearMedicoScreen from "../screens/Medicos/CrearMedicoScreen";
+import HistorialMedicoScreen from "../screens/Medicos/HistorialMedicoScreen";
 import { useThemeColors } from "../utils/themeColors";
 
 const Stack = createStackNavigator();
@@ -41,6 +42,11 @@ export default function MedicosNavigator() {
         options={({ route }) => ({
           title: route.params?.medico ? "Editar Médico" : "Crear Médico",
         })}
+      />
+      <Stack.Screen
+        name="HistorialMedicoScreen"
+        component={HistorialMedicoScreen}
+        options={{ title: "Historial Médico" }}
       />
     </Stack.Navigator>
   );

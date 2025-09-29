@@ -9,6 +9,7 @@ import {
   Image,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import useAuth from "../../hooks/useAuth";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -280,9 +281,7 @@ const ProfileScreen = ({ navigation }) => {
               <View
                 style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
               >
-                <Text style={[styles.cameraIconText, { color: colors.white }]}>
-                  📷
-                </Text>
+                <Ionicons name="camera" size={12} color={colors.white} />
               </View>
             </TouchableOpacity>
             <Text style={[styles.userName, { color: colors.text }]}>

@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -199,13 +200,19 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
             ]}
             onPress={setLightTheme}
           >
+            <Ionicons
+              name="sunny"
+              size={20}
+              color={theme === "light" ? colors.white : colors.text}
+              style={styles.themeIcon}
+            />
             <Text
               style={[
                 styles.themeOptionText,
                 theme === "light" && styles.selectedThemeOptionText,
               ]}
             >
-              ☀️ Claro
+              Claro
             </Text>
           </TouchableOpacity>
 
@@ -216,13 +223,19 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
             ]}
             onPress={setDarkTheme}
           >
+            <Ionicons
+              name="moon"
+              size={20}
+              color={theme === "dark" ? colors.white : colors.text}
+              style={styles.themeIcon}
+            />
             <Text
               style={[
                 styles.themeOptionText,
                 theme === "dark" && styles.selectedThemeOptionText,
               ]}
             >
-              🌙 Oscuro
+              Oscuro
             </Text>
           </TouchableOpacity>
 
@@ -233,13 +246,19 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
             ]}
             onPress={setSystemTheme}
           >
+            <Ionicons
+              name="phone-portrait"
+              size={20}
+              color={theme === "system" ? colors.white : colors.text}
+              style={styles.themeIcon}
+            />
             <Text
               style={[
                 styles.themeOptionText,
                 theme === "system" && styles.selectedThemeOptionText,
               ]}
             >
-              📱 Sistema
+              Sistema
             </Text>
           </TouchableOpacity>
         </View>

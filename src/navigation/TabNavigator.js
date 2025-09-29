@@ -45,11 +45,13 @@ export default function TabNavigator() {
       iconName = focused ? "shield" : "shield-outline";
     } else if (route.name === "Reportes") {
       iconName = focused ? "analytics" : "analytics-outline";
+    } else if (route.name === "Dashboard") {
+      iconName = focused ? "home" : "home-outline";
     } else if (route.name === "Perfil") {
       iconName = focused ? "person" : "person-outline";
     }
 
-    return <Ionicons name={iconName} size={size} color={color} />;
+    return <Ionicons name={iconName} size={size} color={colors.white} />;
   };
 
   return (
@@ -99,6 +101,7 @@ export default function TabNavigator() {
 
       {isPaciente && (
         <>
+          <Tab.Screen name="Dashboard" component={ReportesNavigator} />
           <Tab.Screen name="Citas" component={CitasNavigator} />
           <Tab.Screen name="Médicos" component={MedicosNavigator} />
         </>

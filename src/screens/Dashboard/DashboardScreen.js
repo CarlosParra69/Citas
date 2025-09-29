@@ -8,9 +8,9 @@ import {
   Alert,
 } from "react-native";
 import { useRoleBasedData } from "../../hooks/useRoleBasedData";
-import SuperadminDashboard from "../Dashboard/SuperadminDashboard";
-import MedicoDashboard from "../Dashboard/MedicoDashboard";
-import PacienteDashboard from "../Dashboard/PacienteDashboard";
+import SuperadminDashboard from "./SuperadminDashboard";
+import MedicoDashboard from "./MedicoDashboard";
+import PacienteDashboard from "./PacienteDashboard";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
@@ -76,7 +76,7 @@ const DashboardScreen = ({ navigation }) => {
       <ScrollView
         style={styles.content}
         refreshControl={
-          <RefreshControl refreshing={false} onRefresh={refreshData} />
+          <RefreshControl refreshing={loading} onRefresh={refreshData} />
         }
       >
         {renderRoleBasedDashboard()}
