@@ -89,7 +89,6 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
       const response = await getPacienteHistorial(targetPacienteId);
 
       if (response.success) {
-        console.log("✅ Historial médico cargado:", response);
         // El backend devuelve datos bajo la propiedad 'data'
         const historialData = response.data?.data || response.data || {};
         setHistorial(
@@ -100,7 +99,7 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
         Alert.alert("Error", "No se pudo cargar el historial médico");
       }
     } catch (error) {
-      console.error("❌ Error loading historial medico:", error);
+      console.error("Error loading historial medico:", error);
       Alert.alert("Error", "No se pudo cargar el historial médico");
     } finally {
       setLoading(false);
