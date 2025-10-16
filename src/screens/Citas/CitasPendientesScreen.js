@@ -15,6 +15,8 @@ import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import RejectionModal from "./RejectionModal";
 import { useThemeColors } from "../../utils/themeColors";
+import notificationService from "../../utils/notificationService";
+import { useNotificationScheduler } from "../../hooks/useNotificationScheduler";
 import {
   formatDate,
   formatTime,
@@ -44,6 +46,13 @@ const CitasPendientesScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedCitaId, setSelectedCitaId] = useState(null);
+
+  // Hook para programación automática de notificaciones
+  const { programarNotificacionesCitas } = useNotificationScheduler(
+    contextCitasPendientes || [],
+    30, // 30 minutos de anticipación
+    true // Programar automáticamente
+  );
 
   // Verificar si el usuario está disponible
   if (!user) {
@@ -100,7 +109,16 @@ const CitasPendientesScreen = ({ navigation }) => {
           text: "Aprobar",
           onPress: async () => {
             try {
+              // Buscar la cita para obtener información del paciente
+              const cita = contextCitasPendientes.find(c => c.id === citaId);
+
               await aprobarCitaPendiente(citaId);
+
+              // Enviar notificación de confirmación al paciente
+              if (cita) {
+                await notificationService.programarNotificacionConfirmacionCita(cita);
+              }
+
               Alert.alert("Éxito", "Cita aprobada correctamente");
               // El contexto se actualiza automáticamente
             } catch (error) {
@@ -122,8 +140,59 @@ const CitasPendientesScreen = ({ navigation }) => {
     setSelectedCitaId(null);
   };
 
-  const handleRejectionSuccess = () => {
-    // El contexto se actualiza automáticamente
+  const handleRejectionSuccess = async (citaId, motivo) => {
+    try {
+      // Buscar la cita para obtener información del paciente
+      const cita = contextCitasPendientes.find(c => c.id === citaId);
+
+      if (cita) {
+        // Enviar notificación de cancelación al paciente
+        await notificationService.programarNotificacionCancelacionCita(cita, motivo);
+      }
+
+      // El contexto se actualiza automáticamente
+    } catch (error) {
+      console.error('Error enviando notificación de rechazo:', error);
+    }
+  };
+
+  // Función para probar notificaciones
+  const probarNotificaciones = async () => {
+    try {
+      const exito = await notificationService.programarNotificacionPrueba(5);
+      if (exito) {
+        Alert.alert('Notificación programada', 'Recibirás una notificación de prueba en 5 segundos');
+      } else {
+        Alert.alert('Error', 'No se pudo programar la notificación de prueba');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No tienes permisos para recibir notificaciones');
+    }
+  };
+
+  // Función para programar notificaciones automáticas para citas próximas
+  const programarNotificacionesAutomaticas = async () => {
+    try {
+      const resultado = await programarNotificacionesCitas();
+
+      if (resultado.total === 0) {
+        Alert.alert('Sin citas', 'No hay citas para programar notificaciones');
+        return;
+      }
+
+      if (resultado.futuras === 0) {
+        Alert.alert('Sin citas futuras', 'No hay citas futuras para programar notificaciones');
+        return;
+      }
+
+      Alert.alert(
+        'Notificaciones programadas',
+        `Se programaron ${resultado.programadas} notificaciones para ${resultado.futuras} citas próximas`
+      );
+    } catch (error) {
+      console.error('Error programando notificaciones automáticas:', error);
+      Alert.alert('Error', 'No se pudieron programar las notificaciones automáticas');
+    }
   };
 
   const renderCitaItem = ({ item }) => {
@@ -173,6 +242,23 @@ const CitasPendientesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Citas Pendientes</Text>
+
+      {/* Botones de notificaciones */}
+      <View style={styles.notificationButtons}>
+        <TouchableOpacity
+          style={[styles.notificationButton, styles.testButton]}
+          onPress={probarNotificaciones}
+        >
+          <Text style={styles.testButtonText}>Probar Notificaciones</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.notificationButton, styles.autoButton]}
+          onPress={programarNotificacionesAutomaticas}
+        >
+          <Text style={styles.autoButtonText}>Programar Automático</Text>
+        </TouchableOpacity>
+      </View>
 
       {(contextCitasPendientes?.length || 0) === 0 ? (
         <View style={styles.emptyContainer}>
@@ -305,6 +391,35 @@ const createStyles = (colors) =>
       color: colors.error,
       textAlign: "center",
       marginTop: 20,
+    },
+    notificationButtons: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: 16,
+      gap: 12,
+    },
+    notificationButton: {
+      flex: 1,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    testButton: {
+      backgroundColor: colors.info || colors.primary,
+    },
+    testButtonText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    autoButton: {
+      backgroundColor: colors.success,
+    },
+    autoButtonText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: "500",
     },
   });
 

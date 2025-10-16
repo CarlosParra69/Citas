@@ -1,18 +1,26 @@
 // Configuración de la API
+import Constants from "expo-constants";
 let isDevelopment;
 try {
   // Check if we're in development environment
-  isDevelopment = typeof __DEV__ !== "undefined" ? __DEV__ : true;
+  // Para EAS Build, también verificamos si estamos en modo preview o development
+  const isEASBuild = typeof Constants !== "undefined" && Constants.expoConfig?.extra?.eas;
+  const isPreviewBuild = isEASBuild && process.env.NODE_ENV !== "production";
+
+  isDevelopment = typeof __DEV__ !== "undefined" ? __DEV__ : (isPreviewBuild || true);
 } catch (error) {
   console.error("Error checking __DEV__:", error);
   isDevelopment = true; // Default to development
 }
 
+// Para builds de EAS, permitir override mediante variable de entorno
+const forceDevelopmentURL = process.env.EXPO_PUBLIC_FORCE_DEVELOPMENT_URL === "true";
+
 export const API_CONFIG = {
   // Configuraciones para diferentes entornos
-  BASE_URL: isDevelopment
-    ? "http://10.2.235.97:8000/api" // IP de la máquina host para desarrollo
-    : "https://tu-api-produccion.com/api", // Producción
+  BASE_URL: (isDevelopment || forceDevelopmentURL)
+    ? "https://28005ae3f611.ngrok-free.app/api" // URL de desarrollo (ngrok)
+    : "https://28005ae3f611.ngrok-free.app/api", // Producción
 
   TIMEOUT: 30000, // Aumentado a 30 segundos
 

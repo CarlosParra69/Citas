@@ -4,11 +4,11 @@
     "slug": "MediApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./src/assets/svg/MediApp_logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./src/assets/svg/MediApp_logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -16,14 +16,43 @@
       "supportsTablet": true
     },
     "android": {
+      "useNextNotificationsApi": true,
+      "intentFilters": [],
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
+      "useCleartextTraffic": true,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./src/assets/svg/MediApp_logo.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.carlos_parra.MediApp",
+      "networkSecurityConfig": {
+        "enabled": true,
+        "cleartextTrafficPermitted": true
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./src/assets/svg/MediApp_logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ff53b409-98f4-487e-b48a-c04bff90218c"
+      }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep class com.facebook.react.modules.network.** { *; }"
+          }
+        }
+      ]
+    ]
   }
 }

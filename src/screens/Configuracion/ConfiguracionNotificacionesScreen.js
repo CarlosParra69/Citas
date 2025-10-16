@@ -11,6 +11,8 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthContext } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -43,10 +45,17 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [permisoNotificaciones, setPermisoNotificaciones] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    sound: true,
+    badge: true,
+    alert: true,
+  });
 
   useFocusEffect(
     React.useCallback(() => {
       loadConfiguracion();
+      checkNotificationPermissions();
     }, [])
   );
 
@@ -143,6 +152,107 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
       return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Funciones para manejo de permisos de notificaciones
+  const checkNotificationPermissions = async () => {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      const permiso = status === 'granted';
+      setPermisoNotificaciones(permiso);
+
+      // Guardar preferencia en AsyncStorage
+      await AsyncStorage.setItem('notificaciones_activas', permiso.toString());
+
+      return permiso;
+    } catch (error) {
+      console.error('Error checking permissions:', error);
+      return false;
+    }
+  };
+
+  const requestNotificationPermissions = async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      const permiso = status === 'granted';
+
+      setPermisoNotificaciones(permiso);
+      await AsyncStorage.setItem('notificaciones_activas', permiso.toString());
+
+      if (permiso) {
+        Alert.alert('Permisos concedidos', 'Ahora puedes recibir notificaciones');
+      } else {
+        Alert.alert('Permisos denegados', 'No puedes recibir notificaciones');
+      }
+
+      return permiso;
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
+      Alert.alert('Error', 'No se pudieron solicitar los permisos');
+      return false;
+    }
+  };
+
+  const programarNotificacionPrueba = async () => {
+    try {
+      const permiso = await checkNotificationPermissions();
+
+      if (!permiso) {
+        Alert.alert('Permisos requeridos', 'Se necesitan permisos para programar notificaciones');
+        return;
+      }
+
+      const trigger = new Date(Date.now() + 10 * 1000); // 10 segundos para prueba
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Notificación de Prueba',
+          body: 'Esta es una notificación de prueba desde MediApp',
+          sound: notificationSettings.sound ? 'default' : null,
+        },
+        trigger,
+      });
+
+      Alert.alert('Notificación programada', 'Recibirás una notificación de prueba en 10 segundos');
+    } catch (error) {
+      console.error('Error programando notificación:', error);
+      Alert.alert('Error', 'No se pudo programar la notificación');
+    }
+  };
+
+  const programarNotificacionCita = async (cita, minutosAnticipacion = 30) => {
+    try {
+      const permiso = await checkNotificationPermissions();
+
+      if (!permiso) {
+        console.log('No hay permisos para notificaciones');
+        return;
+      }
+
+      // Calcular fecha y hora de la notificación
+      const fechaCita = new Date(cita.fecha_hora);
+      const fechaNotificacion = new Date(fechaCita.getTime() - (minutosAnticipacion * 60 * 1000));
+
+      // Solo programar si la fecha de notificación es futura
+      if (fechaNotificacion <= new Date()) {
+        console.log('La cita ya pasó o está muy próxima');
+        return;
+      }
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Recordatorio de Cita',
+          body: `Tienes una cita con ${cita.medico?.nombre || 'el médico'} en ${minutosAnticipacion} minutos`,
+          data: { citaId: cita.id, tipo: 'recordatorio_cita' },
+          sound: notificationSettings.sound ? 'default' : null,
+        },
+        trigger: fechaNotificacion,
+      });
+
+      console.log(`Notificación programada para cita ${cita.id} a las ${fechaNotificacion}`);
+    } catch (error) {
+      console.error('Error programando notificación de cita:', error);
     }
   };
 
@@ -297,6 +407,83 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
           "Notificaciones administrativas y de mantenimiento"
         )}
       </View>
+
+      {/* Configuración de permisos de notificaciones push */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Permisos de Notificaciones</Text>
+
+        <View style={styles.permissionSection}>
+          <View style={styles.permissionItem}>
+            <View style={styles.permissionInfo}>
+              <Text style={styles.settingTitle}>Notificaciones Push</Text>
+              <Text style={styles.settingDescription}>
+                Permite recibir notificaciones en tu dispositivo
+              </Text>
+            </View>
+            <View style={styles.permissionActions}>
+              <Text style={[
+                styles.permissionStatus,
+                { color: permisoNotificaciones ? colors.success : colors.error }
+              ]}>
+                {permisoNotificaciones ? 'Activado' : 'Desactivado'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.permissionButton, permisoNotificaciones && styles.permissionButtonDisabled]}
+                onPress={requestNotificationPermissions}
+                disabled={permisoNotificaciones}
+              >
+                <Text style={styles.permissionButtonText}>
+                  {permisoNotificaciones ? 'Concedido' : 'Solicitar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.testButton}
+            onPress={programarNotificacionPrueba}
+          >
+            <Ionicons name="notifications" size={20} color={colors.white} />
+            <Text style={styles.testButtonText}>Probar Notificación</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Configuración de tipos de notificación */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Configuración de Notificaciones</Text>
+
+        {renderNotificationSetting(
+          "citas_recordatorio",
+          "Recordatorios de Citas",
+          "Recibe notificaciones antes de tus citas programadas"
+        )}
+
+        {renderNotificationSetting(
+          "citas_confirmacion",
+          "Confirmación de Citas",
+          "Notificaciones cuando se confirma o aprueba una cita"
+        )}
+
+        {renderNotificationSetting(
+          "citas_cancelacion",
+          "Cancelación de Citas",
+          "Alertas cuando se cancela una cita"
+        )}
+
+        {renderNotificationSetting(
+          "resultados_disponibles",
+          "Resultados Disponibles",
+          "Notificaciones cuando tus resultados médicos están listos"
+        )}
+
+        {renderNotificationSetting(
+          "mensajes_sistema",
+          "Mensajes del Sistema",
+          "Notificaciones administrativas y de mantenimiento"
+        )}
+      </View>
+
       {/* Botón de guardar */}
       {hasUnsavedChanges && (
         <View style={styles.saveSection}>
@@ -478,6 +665,58 @@ const createStyles = (colors) =>
     },
     selectedThemeOptionText: {
       color: colors.white,
+    },
+    permissionSection: {
+      marginBottom: 16,
+    },
+    permissionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 12,
+      marginBottom: 16,
+    },
+    permissionInfo: {
+      flex: 1,
+      marginRight: 16,
+    },
+    permissionActions: {
+      alignItems: "flex-end",
+      gap: 8,
+    },
+    permissionStatus: {
+      fontSize: 12,
+      fontWeight: "500",
+      marginBottom: 4,
+    },
+    permissionButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    permissionButtonDisabled: {
+      backgroundColor: colors.gray,
+    },
+    permissionButtonText: {
+      color: colors.white,
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    testButton: {
+      backgroundColor: colors.info || colors.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+      gap: 8,
+    },
+    testButtonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: "500",
     },
   });
 
