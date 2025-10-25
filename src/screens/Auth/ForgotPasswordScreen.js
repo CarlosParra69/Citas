@@ -10,36 +10,26 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import useAuth from "../../hooks/useAuth";
+import { useThemeColors } from "../../utils/themeColors";
+import { useTheme } from "../../context/ThemeContext";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import globalStyles from "../../styles/globalStyles";
-import { useThemeColors } from "../../utils/themeColors";
-import { useTheme } from "../../context/ThemeContext";
+import axiosInstance from "../../utils/axiosInstance";
 
-const LoginScreen = ({ navigation }) => {
+const ForgotPasswordScreen = ({ navigation }) => {
   const colors = useThemeColors();
   const { theme } = useTheme();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const { login, loading, error, clearError } = useAuth();
-
-  useEffect(() => {
-    if (error) {
-      Alert.alert("Error", error);
-      clearError();
-    }
-  }, [error]);
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     let isValid = true;
 
     // Limpiar errores previos
     setEmailError("");
-    setPasswordError("");
 
     // Validar email
     if (!email.trim()) {
@@ -50,22 +40,42 @@ const LoginScreen = ({ navigation }) => {
       isValid = false;
     }
 
-    // Validar contraseña
-    if (!password.trim()) {
-      setPasswordError("La contraseña es requerida");
-      isValid = false;
-    }
-
     return isValid;
   };
 
-  const handleLogin = async () => {
+  const handleSendResetEmail = async () => {
     if (!validateForm()) return;
 
+    setLoading(true);
     try {
-      await login(email.trim(), password.trim());
+      const response = await axiosInstance.post('/auth/forgot-password', {
+        email: email.trim(),
+      });
+
+      if (response.data.success) {
+        Alert.alert(
+          "Correo enviado",
+          "Se ha enviado un correo electrónico con instrucciones para recuperar tu contraseña. Revisa tu bandeja de entrada.",
+          [
+            {
+              text: "OK",
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      }
     } catch (error) {
-      console.error("Error al iniciar sesión:", error);
+      console.error("Error al enviar correo de recuperación:", error);
+
+      let errorMessage = "Error al enviar el correo. Por favor, inténtalo de nuevo.";
+
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      }
+
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -90,7 +100,11 @@ const LoginScreen = ({ navigation }) => {
           resizeMode="contain"
         />
         <Text style={styles.hospitalTitle}>MediApp</Text>
-        <Text style={styles.subtitle}>Gestión de Citas Médicas</Text>
+        <Text style={styles.subtitle}>Recuperar Contraseña</Text>
+
+        <Text style={styles.description}>
+          Ingresa tu correo electrónico y te enviaremos un enlace para recuperar tu contraseña.
+        </Text>
 
         <InputField
           placeholder="Correo electrónico"
@@ -101,27 +115,17 @@ const LoginScreen = ({ navigation }) => {
           error={emailError}
         />
 
-        <InputField
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          keyboardType="default"
-          secureTextEntry
-          autoCapitalize="none"
-          error={passwordError}
-        />
-
         <ButtonPrimary
-          title="Iniciar Sesión"
-          onPress={handleLogin}
+          title="Enviar correo de recuperación"
+          onPress={handleSendResetEmail}
           disabled={loading}
         />
 
         <TouchableOpacity
-          style={styles.forgotPasswordLink}
-          onPress={() => navigation.navigate('ForgotPassword')}
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
         >
-          <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+          <Text style={styles.backButtonText}>← Volver al inicio de sesión</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -159,24 +163,22 @@ const createStyles = (colors) =>
       textAlign: "center",
       marginBottom: 32,
     },
-    registerLink: {
-      marginTop: 20,
-      alignItems: "center",
-    },
-    registerText: {
-      color: colors.primary,
+    description: {
       fontSize: 16,
-      textDecorationLine: "underline",
+      color: colors.text,
+      textAlign: "center",
+      marginBottom: 32,
+      lineHeight: 24,
     },
-    forgotPasswordLink: {
+    backButton: {
       marginTop: 20,
       alignItems: "center",
     },
-    forgotPasswordText: {
+    backButtonText: {
       color: colors.primary,
       fontSize: 16,
       textDecorationLine: "underline",
     },
   });
 
-export default LoginScreen;
+export default ForgotPasswordScreen;

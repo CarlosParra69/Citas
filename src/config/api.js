@@ -19,8 +19,8 @@ const forceDevelopmentURL = process.env.EXPO_PUBLIC_FORCE_DEVELOPMENT_URL === "t
 export const API_CONFIG = {
   // Configuraciones para diferentes entornos
   BASE_URL: (isDevelopment || forceDevelopmentURL)
-    ? "https://28005ae3f611.ngrok-free.app/api" // URL de desarrollo (ngrok)
-    : "https://28005ae3f611.ngrok-free.app/api", // Producción
+    ? "http://10.2.232.142:8000/api" // URL de desarrollo (ngrok)
+    : "http://10.2.232.142:8000/api", // Producción
 
   TIMEOUT: 30000, // Aumentado a 30 segundos
 

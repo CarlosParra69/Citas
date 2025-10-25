@@ -373,40 +373,6 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-      {/* Configuración de tipos de notificación */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tipos de Notificación</Text>
-
-        {renderNotificationSetting(
-          "citas_recordatorio",
-          "Recordatorios de Citas",
-          "Recibe notificaciones antes de tus citas programadas"
-        )}
-
-        {renderNotificationSetting(
-          "citas_confirmacion",
-          "Confirmación de Citas",
-          "Notificaciones cuando se confirma o aprueba una cita"
-        )}
-
-        {renderNotificationSetting(
-          "citas_cancelacion",
-          "Cancelación de Citas",
-          "Alertas cuando se cancela una cita"
-        )}
-
-        {renderNotificationSetting(
-          "resultados_disponibles",
-          "Resultados Disponibles",
-          "Notificaciones cuando tus resultados médicos están listos"
-        )}
-
-        {renderNotificationSetting(
-          "mensajes_sistema",
-          "Mensajes del Sistema",
-          "Notificaciones administrativas y de mantenimiento"
-        )}
-      </View>
 
       {/* Configuración de permisos de notificaciones push */}
       <View style={styles.section}>
@@ -447,41 +413,6 @@ const ConfiguracionNotificacionesScreen = ({ navigation }) => {
             <Text style={styles.testButtonText}>Probar Notificación</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Configuración de tipos de notificación */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Configuración de Notificaciones</Text>
-
-        {renderNotificationSetting(
-          "citas_recordatorio",
-          "Recordatorios de Citas",
-          "Recibe notificaciones antes de tus citas programadas"
-        )}
-
-        {renderNotificationSetting(
-          "citas_confirmacion",
-          "Confirmación de Citas",
-          "Notificaciones cuando se confirma o aprueba una cita"
-        )}
-
-        {renderNotificationSetting(
-          "citas_cancelacion",
-          "Cancelación de Citas",
-          "Alertas cuando se cancela una cita"
-        )}
-
-        {renderNotificationSetting(
-          "resultados_disponibles",
-          "Resultados Disponibles",
-          "Notificaciones cuando tus resultados médicos están listos"
-        )}
-
-        {renderNotificationSetting(
-          "mensajes_sistema",
-          "Mensajes del Sistema",
-          "Notificaciones administrativas y de mantenimiento"
-        )}
       </View>
 
       {/* Botón de guardar */}
