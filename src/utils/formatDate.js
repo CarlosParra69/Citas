@@ -28,13 +28,16 @@ export const formatShortDate = (date) => {
 export const formatTime = (date) => {
   if (!date) return "";
 
+  const localDate = new Date(date);
+
   const options = {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: "America/Bogota",
   };
 
-  return new Date(date).toLocaleTimeString("es-ES", options);
+  return localDate.toLocaleTimeString("es-ES", options);
 };
 
 /**
@@ -45,7 +48,8 @@ export const formatTime = (date) => {
 export const formatCitaDateTime = (date) => {
   if (!date) return "";
 
-  const dateObj = new Date(date);
+  const localDate = new Date(date);
+
   const options = {
     weekday: "long",
     year: "numeric",
@@ -54,9 +58,10 @@ export const formatCitaDateTime = (date) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+    timeZone: "America/Bogota",
   };
 
-  return dateObj.toLocaleDateString("es-ES", options);
+  return localDate.toLocaleDateString("es-ES", options);
 };
 
 /**
@@ -67,7 +72,6 @@ export const formatCitaDateTime = (date) => {
 export const formatDateTimeForAPI = (dateTime) => {
   if (!dateTime) return "";
 
-  // Crear fecha en zona horaria local
   const year = dateTime.getFullYear();
   const month = String(dateTime.getMonth() + 1).padStart(2, "0");
   const day = String(dateTime.getDate()).padStart(2, "0");
@@ -75,11 +79,30 @@ export const formatDateTimeForAPI = (dateTime) => {
   const minutes = String(dateTime.getMinutes()).padStart(2, "0");
   const seconds = String(dateTime.getSeconds()).padStart(2, "0");
 
-  // Formato: YYYY-MM-DDTHH:MM:SS (sin Z para indicar que es local)
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
 
-// Función para verificar si el formato es correcto
+/**
+ * Convierte una fecha local a UTC antes de enviarla al backend
+ * @param {Date} dateTime - La fecha y hora local a convertir
+ * @returns {string} - Fecha en formato UTC (ej: "2024-01-15T20:30:00Z")
+ */
+export const formatDateTimeUTCForAPI = (dateTime) => {
+  if (!dateTime) return "";
+
+  const colombiaOffset = 5 * 60 * 60 * 1000;
+  const utcDateTime = new Date(dateTime.getTime() + colombiaOffset);
+  
+  const year = utcDateTime.getFullYear();
+  const month = String(utcDateTime.getMonth() + 1).padStart(2, "0");
+  const day = String(utcDateTime.getDate()).padStart(2, "0");
+  const hours = String(utcDateTime.getHours()).padStart(2, "0");
+  const minutes = String(utcDateTime.getMinutes()).padStart(2, "0");
+  const seconds = String(utcDateTime.getSeconds()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+};
+
 export const validateDateTimeFormat = (dateTimeString) => {
   const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
   return isoRegex.test(dateTimeString);

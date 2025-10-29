@@ -21,7 +21,7 @@ const CitasScreen = ({ navigation }) => {
   const colors = useThemeColors();
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const { user } = useAuthContext();
-  const { citas, loading, error, fetchCitas, clearError, clearCitas } =
+  const { citas, loading, error, fetchCitas, clearError, clearCitas, forceCitas, forceLoading, fetchForceCitas, clearForceCitas } =
     useCitas();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -45,7 +45,12 @@ const CitasScreen = ({ navigation }) => {
     useCallback(() => {
       // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
       clearCitas();
-      loadCitas();
+      if (user?.rol === "superadmin") {
+        clearForceCitas();
+        loadForceCitas();
+      } else {
+        loadCitas();
+      }
     }, [user]) // Solo dependemos del usuario
   );
 
@@ -58,16 +63,31 @@ const CitasScreen = ({ navigation }) => {
 
   const loadCitas = async () => {
     try {
-      // Pasar el usuario para filtrar las citas según su rol
-      await fetchCitas(user);
+      // Para usuarios normales (medico, paciente), cargar sus citas filtradas
+      if (user?.rol !== "superadmin") {
+        await fetchCitas(user);
+      }
     } catch (err) {
       console.error("Error loading citas:", err);
     }
   };
 
+  const loadForceCitas = async () => {
+    try {
+      // Para superadministrador, cargar todas las citas del sistema
+      await fetchForceCitas(user);
+    } catch (err) {
+      console.error("Error loading force citas:", err);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadCitas();
+    if (user?.rol === "superadmin") {
+      await loadForceCitas();
+    } else {
+      await loadCitas();
+    }
     setRefreshing(false);
   };
 
@@ -119,11 +139,17 @@ const CitasScreen = ({ navigation }) => {
     );
   };
 
-  if (loading && !refreshing) return <Loader />;
+  const displayLoading = (loading && !refreshing) || (forceLoading && user?.rol === "superadmin");
+  if (displayLoading) return <Loader />;
+
+  // Para superadministrador, usar citas forzadas
+  const displayCitas = user?.rol === "superadmin" ? forceCitas : citas;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Mis Citas Médicas</Text>
+      <Text style={styles.title}>
+        {user?.rol === "superadmin" ? "Gestión de Citas del Sistema" : "Mis Citas Médicas"}
+      </Text>
 
       <View style={styles.buttonsGridContainer}>
         {user?.rol === "superadmin" && (
@@ -196,12 +222,19 @@ const CitasScreen = ({ navigation }) => {
         )}
       </View>
 
-      {!citas || citas.length === 0 ? (
+      {!displayCitas || displayCitas.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No tienes citas programadas</Text>
-          <Text style={styles.emptySubtext}>
-            Presiona "Nueva Cita" para agendar una
+          <Text style={styles.emptyText}>
+            {user?.rol === "superadmin"
+              ? "No hay citas en el sistema"
+              : "No tienes citas programadas"
+            }
           </Text>
+          {user?.rol !== "superadmin" && (
+            <Text style={styles.emptySubtext}>
+              Presiona "Nueva Cita" para agendar una
+            </Text>
+          )}
         </View>
       ) : (
         <ScrollView
@@ -210,7 +243,7 @@ const CitasScreen = ({ navigation }) => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {citas.map(renderCita)}
+          {displayCitas.map(renderCita)}
         </ScrollView>
       )}
     </View>

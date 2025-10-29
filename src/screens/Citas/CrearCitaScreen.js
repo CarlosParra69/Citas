@@ -25,7 +25,7 @@ import {
 import { getPacientes } from "../../api/pacientes";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
-import { formatDateTimeForAPI, isDateTimeFuture } from "../../utils/formatDate";
+import { formatDateTimeForAPI, formatDateTimeUTCForAPI, isDateTimeFuture } from "../../utils/formatDate";
 
 const CrearCitaScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -50,10 +50,13 @@ const CrearCitaScreen = ({ navigation }) => {
   const [medicos, setMedicos] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [selectedEspecialidad, setSelectedEspecialidad] = useState("");
+  const [selectedPaciente, setSelectedPaciente] = useState("");
   const [loadingData, setLoadingData] = useState(true);
+  
+  // SIMPLIFICADO: Solo estados necesarios para disponibilidad
   const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [availabilityChecked, setAvailabilityChecked] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [isAvailable, setIsAvailable] = useState(null);
+  const [availabilityCheckInProgress, setAvailabilityCheckInProgress] = useState(false);
 
   // Componente SelectModal para especialidades
   const SelectModal = ({
@@ -71,7 +74,7 @@ const CrearCitaScreen = ({ navigation }) => {
     return (
       <View style={styles.selectContainer}>
         {label && <Text style={styles.label}>{label}</Text>}
-        
+         
         <TouchableOpacity
           style={[
             styles.selectButton,
@@ -167,22 +170,20 @@ const CrearCitaScreen = ({ navigation }) => {
   }, [selectedEspecialidad]);
 
   useEffect(() => {
-    // Reset availability check when medico or fecha changes
-    if (formData.medico_id && formData.fecha_hora) {
-      checkAvailability();
-    } else {
-      setAvailabilityChecked(false);
-      setIsAvailable(false);
+    // Reset availability check when medico changes
+    if (formData.medico_id) {
+      setIsAvailable(null);
+      setAvailabilityCheckInProgress(false);
     }
-  }, [formData.medico_id, formData.fecha_hora]);
+  }, [formData.medico_id]);
 
   // Reset selected date when medico changes
   useEffect(() => {
     if (formData.medico_id !== "") {
       setSelectedDateTime(null);
       setFormData((prev) => ({ ...prev, fecha_hora: "" }));
-      setAvailabilityChecked(false);
-      setIsAvailable(false);
+      setIsAvailable(null);
+      setAvailabilityCheckInProgress(false);
     }
   }, [formData.medico_id]);
 
@@ -193,11 +194,14 @@ const CrearCitaScreen = ({ navigation }) => {
         setEspecialidades(especialidadesResponse.data || []);
       }
 
-      // Si es médico, cargar pacientes para selección
-      if (user?.rol === "medico") {
+      // Si es médico o superadministrador, cargar pacientes para selección
+      if (user?.rol === "medico" || user?.rol === "superadmin") {
         const pacientesResponse = await getPacientes();
-        if (pacientesResponse.success) {
-          setPacientes(pacientesResponse.data || []);
+         
+        if (pacientesResponse.data?.success) {
+          // Manejar la estructura de respuesta de Laravel paginada
+          const pacientesData = pacientesResponse.data?.data?.data || pacientesResponse.data?.data || [];
+          setPacientes(pacientesData);
         }
       }
     } catch (error) {
@@ -222,15 +226,27 @@ const CrearCitaScreen = ({ navigation }) => {
     }
   };
 
-  const checkAvailability = async (dateTimeString = null) => {
-    const fechaHoraToCheck = dateTimeString || formData.fecha_hora;
-    if (!formData.medico_id || !fechaHoraToCheck) return;
+  // FUNCIÓN SIMPLIFICADA DE VERIFICACIÓN
+  const checkAvailability = async (dateTimeString) => {
+    
+    
+    if (!formData.medico_id || !dateTimeString) return;
+    
+    // Prevenir múltiples verificaciones simultáneas
+    if (availabilityCheckInProgress) {
+      
+      return;
+    }
 
     try {
+      setAvailabilityCheckInProgress(true);
       setCheckingAvailability(true);
+      
+      
+      
       const availabilityResponse = await checkMedicoAvailability(
         formData.medico_id,
-        fechaHoraToCheck,
+        dateTimeString,
         {
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           offset: new Date().getTimezoneOffset(),
@@ -239,26 +255,27 @@ const CrearCitaScreen = ({ navigation }) => {
       );
 
       if (availabilityResponse.success) {
+        
         setIsAvailable(availabilityResponse.data.available);
-        setAvailabilityChecked(true);
       } else {
+        
         setIsAvailable(false);
-        setAvailabilityChecked(true);
       }
     } catch (error) {
       console.error("Error checking availability:", error);
       setIsAvailable(false);
-      setAvailabilityChecked(true);
     } finally {
       setCheckingAvailability(false);
+      setAvailabilityCheckInProgress(false);
+      
     }
   };
 
   const validateForm = () => {
     const newErrors = {};
 
-    // Si es médico, debe seleccionar paciente
-    if (user?.rol === "medico" && !formData.paciente_id) {
+    // Si es médico o superadministrador, debe seleccionar paciente
+    if ((user?.rol === "medico" || user?.rol === "superadmin") && !formData.paciente_id) {
       newErrors.paciente_id = "Selecciona un paciente";
     }
 
@@ -280,9 +297,8 @@ const CrearCitaScreen = ({ navigation }) => {
       }
     }
 
-    if (availabilityChecked && !isAvailable) {
-      newErrors.fecha_hora =
-        "El médico no está disponible en esta fecha y hora";
+    if (isAvailable === false) {
+      newErrors.fecha_hora = "El médico no está disponible en esta fecha y hora";
     }
 
     if (!formData.motivo_consulta.trim()) {
@@ -300,10 +316,11 @@ const CrearCitaScreen = ({ navigation }) => {
       // Determinar el estado inicial basado en el rol del usuario
       const isMedico = user?.rol === "medico";
       const isPaciente = user?.rol === "paciente";
-      const estadoInicial = isMedico ? "programada" : "pendiente_aprobacion";
+      const isSuperAdmin = user?.rol === "superadmin";
+      const estadoInicial = (isMedico || isSuperAdmin) ? "programada" : "pendiente_aprobacion";
 
       const citaData = {
-        paciente_id: isMedico
+        paciente_id: (isMedico || isSuperAdmin)
           ? parseInt(formData.paciente_id)
           : user.paciente_id || user.id,
         medico_id: parseInt(formData.medico_id),
@@ -316,7 +333,7 @@ const CrearCitaScreen = ({ navigation }) => {
 
       await agregarCita(citaData);
 
-      const mensaje = isMedico
+      const mensaje = (isMedico || isSuperAdmin)
         ? "Cita creada y aprobada exitosamente"
         : "Solicitud de cita enviada exitosamente. Pendiente de aprobación médica";
 
@@ -339,16 +356,30 @@ const CrearCitaScreen = ({ navigation }) => {
   };
 
   const handleDateSelect = (dateTime) => {
+    
     setSelectedDateTime(dateTime);
 
-    // Usar la función de utilidad para formatear la fecha correctamente
-    const isoString = formatDateTimeForAPI(dateTime);
+    // Limpiar estados de disponibilidad
+    setCheckingAvailability(false);
+    setIsAvailable(null);
+    setAvailabilityCheckInProgress(false);
 
-    setFormData((prev) => ({ ...prev, fecha_hora: isoString }));
+    // Usar formato UTC para envío final al backend
+    const utcDateString = formatDateTimeUTCForAPI(dateTime);
+
+    // Guardar UTC para envío final
+    setFormData((prev) => ({ ...prev, fecha_hora: utcDateString }));
 
     if (errors.fecha_hora) {
       setErrors((prev) => ({ ...prev, fecha_hora: "" }));
     }
+  };
+
+  const handleAvailabilityCheck = (dateTimeString) => {
+    
+    
+    // Llamar verificación directamente
+    checkAvailability(dateTimeString);
   };
 
   if (loadingData) {
@@ -356,6 +387,7 @@ const CrearCitaScreen = ({ navigation }) => {
   }
 
   const isMedico = user?.rol === "medico";
+  const isSuperAdmin = user?.rol === "superadmin";
 
   return (
     <KeyboardAvoidingView
@@ -369,51 +401,33 @@ const CrearCitaScreen = ({ navigation }) => {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={styles.title}>
-          {isMedico ? "Crear Cita Médica" : "Nueva Cita Médica"}
+          {(isMedico || isSuperAdmin) ? "Crear Cita Médica" : "Nueva Cita Médica"}
         </Text>
 
-        {/* Selector de Paciente (solo para médicos) */}
-        {isMedico && (
-          <>
-            <Text style={styles.label}>Paciente *</Text>
-            <View style={styles.pickerContainer}>
-              {pacientes.length === 0 ? (
-                <Text style={styles.noDataText}>
-                  No hay pacientes disponibles
-                </Text>
-              ) : (
-                pacientes.map((paciente) => (
-                  <TouchableOpacity
-                    key={paciente.id}
-                    style={[
-                      styles.optionButton,
-                      formData.paciente_id === paciente.id.toString() &&
-                        styles.selectedOption,
-                    ]}
-                    onPress={() =>
-                      handleChange("paciente_id", paciente.id.toString())
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.optionText,
-                        formData.paciente_id === paciente.id.toString() &&
-                          styles.selectedOptionText,
-                      ]}
-                    >
-                      {paciente.nombre} {paciente.apellido}
-                    </Text>
-                    <Text style={styles.patientDetails}>
-                      {paciente.cedula} - {paciente.email}
-                    </Text>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-            {errors.paciente_id && (
-              <Text style={styles.errorText}>{errors.paciente_id}</Text>
-            )}
-          </>
+        {/* Selector de Paciente (para médicos y superadministradores) */}
+        {(isMedico || isSuperAdmin) && (
+          <SelectModal
+            options={pacientes.map(paciente => ({
+              id: paciente.id,
+              nombre: `${paciente.nombre} ${paciente.apellido}`,
+              cedula: paciente.cedula,
+              email: paciente.email,
+              paciente: paciente // Guardar la referencia completa del paciente
+            }))}
+            selectedValue={selectedPaciente}
+            onSelect={(pacienteId) => {
+              const paciente = pacientes.find(p => p.id === pacienteId);
+              setSelectedPaciente(pacienteId);
+              setFormData((prev) => ({ ...prev, paciente_id: pacienteId.toString() }));
+              if (errors.paciente_id) {
+                setErrors((prev) => ({ ...prev, paciente_id: "" }));
+              }
+            }}
+            placeholder="Selecciona un paciente"
+            label="Paciente *"
+            error={errors.paciente_id}
+            colors={colors}
+          />
         )}
 
         {/* Selector de Especialidad */}
@@ -474,17 +488,9 @@ const CrearCitaScreen = ({ navigation }) => {
           selectedDate={selectedDateTime}
           onDateSelect={handleDateSelect}
           medicoId={formData.medico_id}
-          onAvailabilityCheck={(dateTimeString) => {
-            if (formData.medico_id) {
-              checkAvailability(dateTimeString);
-            }
-          }}
+          onAvailabilityCheck={handleAvailabilityCheck}
           isAvailable={isAvailable}
           checkingAvailability={checkingAvailability}
-          onAvailabilityResult={(available) => {
-            setIsAvailable(available);
-            setAvailabilityChecked(true);
-          }}
         />
         {errors.fecha_hora && (
           <Text style={styles.errorText}>{errors.fecha_hora}</Text>

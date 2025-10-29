@@ -36,16 +36,11 @@ const MiniCalendario = ({
     medicoId: null,
     date: null,
   });
-  const [localAvailability, setLocalAvailability] = useState(null);
-  const [localCheckingAvailability, setLocalCheckingAvailability] =
-    useState(false);
+  // ELIMINAR lastTimeSelected para simplificar
 
-  // Sincronizar tempDateTime con selectedDate cuando cambie
+  // Sincronizar tempDateTime con selectedDate
   useEffect(() => {
-    if (
-      selectedDate &&
-      (!tempDateTime || selectedDate.getTime() !== tempDateTime.getTime())
-    ) {
+    if (selectedDate && (!tempDateTime || selectedDate.getTime() !== tempDateTime.getTime())) {
       setTempDateTime(selectedDate);
     }
   }, [selectedDate]);
@@ -53,10 +48,9 @@ const MiniCalendario = ({
   // Cargar horarios disponibles del médico cuando cambie la fecha o el médico
   useEffect(() => {
     const dateString = tempDateTime
-      ? tempDateTime.toISOString().split("T")[0]
+      ? tempDateTime.toLocaleDateString("en-CA")
       : null;
 
-    // Evitar llamadas duplicadas
     if (
       lastLoadParams.medicoId === medicoId &&
       lastLoadParams.date === dateString
@@ -74,30 +68,18 @@ const MiniCalendario = ({
     }
   }, [medicoId, tempDateTime, lastLoadParams]);
 
-  // Escuchar cambios en las props de disponibilidad
-  useEffect(() => {
-    if (checkingAvailability !== localCheckingAvailability) {
-      setLocalCheckingAvailability(checkingAvailability);
-    }
-    if (isAvailable !== localAvailability) {
-      setLocalAvailability(isAvailable);
-    }
-  }, [checkingAvailability, isAvailable]);
-
   const loadMedicoHorarios = async () => {
     if (!medicoId) return;
 
     try {
       setLoadingHorarios(true);
-      const fechaFormateada = tempDateTime.toISOString().split("T")[0];
+      const fechaFormateada = tempDateTime.toLocaleDateString("en-CA");
 
       const response = await getMedicoDisponibilidad(medicoId, fechaFormateada);
 
       if (response && response.success) {
-        // Los horarios pueden venir como string JSON escapado o como objeto
         let horariosAtencion;
         try {
-          // Si es un string JSON, parsearlo
           if (typeof response.data.horarios_atencion === "string") {
             horariosAtencion = JSON.parse(response.data.horarios_atencion);
           } else if (typeof response.data.horarios_atencion === "object") {
@@ -109,15 +91,12 @@ const MiniCalendario = ({
           horariosAtencion = null;
         }
 
-        // Verificar si el médico tiene horarios de atención configurados
         if (!horariosAtencion) {
           const horariosPorDefecto = generarHorasPorDefecto();
           setMedicoHorarios(horariosPorDefecto);
           return;
         }
 
-        // Los horarios vienen en formato de rangos como "08:00-17:00"
-        // Necesito convertirlos a horas individuales disponibles
         const horariosDisponibles = generarHorasDisponibles(horariosAtencion);
         setMedicoHorarios(horariosDisponibles);
       } else {
@@ -130,7 +109,6 @@ const MiniCalendario = ({
     }
   };
 
-  // Generar array de horas disponibles a partir de los rangos de horarios del médico
   const generarHorasDisponibles = (horariosAtencion) => {
     if (!horariosAtencion) return [];
 
@@ -139,7 +117,6 @@ const MiniCalendario = ({
       .toLocaleDateString("es-ES", { weekday: "long" })
       .toLowerCase();
 
-    // Mapear días de español a inglés para coincidir con el backend
     const diasMap = {
       lunes: "lunes",
       martes: "martes",
@@ -151,8 +128,6 @@ const MiniCalendario = ({
     };
 
     const diaEspanol = diasMap[diaSemana];
-
-    // Verificar que diaEspanol existe y es válido
     if (!diaEspanol) return [];
 
     const horariosDelDia = horariosAtencion[diaEspanol];
@@ -162,25 +137,20 @@ const MiniCalendario = ({
       !Array.isArray(horariosDelDia) ||
       horariosDelDia.length === 0
     ) {
-      // Usar horarios por defecto cuando no hay horarios específicos para este día
       return generarHorasPorDefecto();
     }
 
-    // Generar horas disponibles para cada rango horario del día
     horariosDelDia.forEach((rangoHorario) => {
       let horaInicio, horaFin;
 
-      // Verificar si es un objeto con propiedades inicio/fin o un string
       if (
         typeof rangoHorario === "object" &&
         rangoHorario.inicio &&
         rangoHorario.fin
       ) {
-        // ✅ Formato correcto: {"inicio": "08:00", "fin": "17:00"}
         horaInicio = rangoHorario.inicio;
         horaFin = rangoHorario.fin;
       } else if (typeof rangoHorario === "string") {
-        // ❌ Formato string: "08:00-17:00"
         const [inicio, fin] = rangoHorario.split("-");
         horaInicio = inicio;
         horaFin = fin;
@@ -192,7 +162,6 @@ const MiniCalendario = ({
         const [inicioHora, inicioMin] = horaInicio.split(":").map(Number);
         const [finHora, finMin] = horaFin.split(":").map(Number);
 
-        // Verificar que las horas sean números válidos
         if (
           isNaN(inicioHora) ||
           isNaN(inicioMin) ||
@@ -202,7 +171,6 @@ const MiniCalendario = ({
           return;
         }
 
-        // Generar intervalos de 30 minutos
         const inicioMinutos = inicioHora * 60 + inicioMin;
         const finMinutos = finHora * 60 + finMin;
 
@@ -222,12 +190,11 @@ const MiniCalendario = ({
     return horasDisponibles;
   };
 
-  // Generar horas por defecto cuando no hay horarios del backend
   const generarHorasPorDefecto = () => {
     const horasPorDefecto = [];
-    const horaInicio = 8; // 8 AM
-    const horaFin = 17; // 5 PM
-    const intervalo = 30; // minutos
+    const horaInicio = 8;
+    const horaFin = 17;
+    const intervalo = 30;
 
     for (let hora = horaInicio; hora < horaFin; hora++) {
       for (let minuto = 0; minuto < 60; minuto += intervalo) {
@@ -264,7 +231,8 @@ const MiniCalendario = ({
   };
 
   const handleDatePress = (day) => {
-    const selectedDate = new Date(
+    console.log('MiniCalendario: handleDatePress ejecutado');
+    const newDate = new Date(
       currentMonth.getFullYear(),
       currentMonth.getMonth(),
       day
@@ -272,41 +240,35 @@ const MiniCalendario = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // No permitir fechas pasadas
-    if (selectedDate < today) {
+    if (newDate < today) {
       return;
     }
 
-    // Actualizar la fecha temporal para cargar horarios
-    setTempDateTime(selectedDate);
+    setTempDateTime(newDate);
 
-    // Si hay un médico seleccionado, mostrar modal con horarios
     if (medicoId) {
-      // Cargar horarios antes de mostrar el modal
       loadMedicoHorarios()
         .then(() => {
           setShowTimePicker(true);
         })
         .catch((error) => {
-          setShowTimePicker(true); // Mostrar modal de todas formas
+          setShowTimePicker(true);
         });
     } else {
-      // Si no hay médico, solo seleccionar la fecha
-      onDateSelect(selectedDate);
+      onDateSelect(newDate);
     }
   };
 
   const handleTimeSelect = (time) => {
+    
     setSelectedTime(time);
     const [hours, minutes] = time.split(":");
 
-    // Usar la fecha seleccionada (tempDateTime) en lugar de la fecha actual
     if (!tempDateTime) {
       console.error("No hay fecha seleccionada");
       return;
     }
 
-    // Crear fecha usando la fecha seleccionada con la hora elegida
     const targetDate = new Date(
       tempDateTime.getFullYear(),
       tempDateTime.getMonth(),
@@ -317,28 +279,22 @@ const MiniCalendario = ({
       0
     );
 
-    // Llamar a la función del padre para actualizar la fecha seleccionada
+    
     onDateSelect(targetDate);
 
+    
     if (onAvailabilityCheck) {
-      // Usar la función de utilidad para formatear la fecha correctamente
       const isoString = formatDateTimeForAPI(targetDate);
-
-      // Establecer estado local de carga
-      setLocalCheckingAvailability(true);
-      setLocalAvailability(null);
-
-      // Llamar a la función del padre y manejar la respuesta
       onAvailabilityCheck(isoString);
     }
 
+    
     setShowTimePicker(false);
   };
 
   const handleCloseModal = () => {
     setShowTimePicker(false);
     setSelectedTime("");
-    // No limpiar la fecha seleccionada, mantenerla para que el usuario pueda intentar de nuevo
   };
 
   const navigateMonth = (direction) => {
@@ -357,7 +313,6 @@ const MiniCalendario = ({
 
     const days = [];
 
-    // Agregar días vacíos al inicio
     for (let i = 0; i < firstDay; i++) {
       days.push(
         <View key={`empty-${i}`} style={styles.dayContainer}>
@@ -366,7 +321,6 @@ const MiniCalendario = ({
       );
     }
 
-    // Agregar días del mes
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(
         currentMonth.getFullYear(),
@@ -447,7 +401,6 @@ const MiniCalendario = ({
         showsVerticalScrollIndicator={true}
         contentContainerStyle={styles.timeSlotsContent}
       >
-        {/* Grid de botones de horarios */}
         <View style={styles.timeGrid}>
           {medicoHorarios.map((time, index) => (
             <TouchableOpacity
@@ -483,9 +436,6 @@ const MiniCalendario = ({
 
   return (
     <View style={styles.container}>
-      {/* Modal debe estar fuera del contenedor principal */}
-
-      {/* Selector de Mes */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigateMonth(-1)}>
           <Text style={styles.navButton}>‹</Text>
@@ -498,7 +448,6 @@ const MiniCalendario = ({
         </TouchableOpacity>
       </View>
 
-      {/* Días de la semana */}
       <View style={styles.weekDays}>
         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
           <Text key={day} style={styles.weekDayText}>
@@ -507,10 +456,8 @@ const MiniCalendario = ({
         ))}
       </View>
 
-      {/* Calendario */}
       <View style={styles.calendar}>{renderCalendar()}</View>
 
-      {/* Fecha seleccionada */}
       {selectedDate && (
         <View style={styles.selectedDateContainer}>
           <Text style={styles.selectedDateText}>
@@ -538,20 +485,20 @@ const MiniCalendario = ({
             </Text>
           </TouchableOpacity>
 
-          {localCheckingAvailability && (
+          {checkingAvailability && (
             <Text style={styles.checkingText}>
               Verificando disponibilidad...
             </Text>
           )}
 
-          {localAvailability !== null && !localCheckingAvailability && (
+          {isAvailable !== null && !checkingAvailability && (
             <Text
               style={[
                 styles.availabilityText,
-                { color: localAvailability ? colors.success : colors.error },
+                { color: isAvailable ? colors.success : colors.error },
               ]}
             >
-              {localAvailability
+              {isAvailable
                 ? "✓ Médico disponible"
                 : "✗ Médico no disponible"}
             </Text>
@@ -559,7 +506,6 @@ const MiniCalendario = ({
         </View>
       )}
 
-      {/* Modal de selección de hora */}
       <Modal
         visible={showTimePicker}
         animationType="slide"
@@ -662,7 +608,7 @@ const createStyles = (colors) =>
       flexWrap: "wrap",
     },
     dayContainer: {
-      width: "14.28%", // 100% / 7 días
+      width: "14.28%",
       aspectRatio: 1,
       justifyContent: "center",
       alignItems: "center",
@@ -699,7 +645,7 @@ const createStyles = (colors) =>
       borderRadius: 50,
     },
     today: {
-      backgroundColor: colors.accent,
+      backgroundColor: colors.success,
       borderRadius: 50,
     },
     todayText: {
@@ -708,7 +654,6 @@ const createStyles = (colors) =>
     },
     pastDay: {
       backgroundColor: colors.lightGray,
-      borderRadius: 50,
     },
     pastDayText: {
       color: colors.gray,
@@ -794,7 +739,6 @@ const createStyles = (colors) =>
     calendarIcon: {
       marginRight: 8,
     },
-    // Estilos de modalStatus eliminados - ya no se usa
     timeSlotsContainer: {
       flex: 1,
       maxHeight: 320,
@@ -806,7 +750,6 @@ const createStyles = (colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    // Estilos de timeButtonsContainer y timeSlotsTitle eliminados - ya no se usa
     timeGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
@@ -815,7 +758,6 @@ const createStyles = (colors) =>
       paddingVertical: 8,
       gap: 8,
     },
-    // Estilos de timeSlot eliminados - ya no se usa
     timeButton: {
       backgroundColor: colors.input || colors.surface,
       borderWidth: 2,
@@ -894,9 +836,6 @@ const createStyles = (colors) =>
       fontSize: 16,
       fontWeight: "600",
     },
-    // Estilos del Picker eliminados - ya no se usa
-    // Estilos de selectedTimeContainer eliminados - ya no se usa
-    // Estilos de horariosIndicator eliminados - ya no se usa
     openModalButton: {
       backgroundColor: colors.primary,
       padding: 12,
@@ -917,7 +856,6 @@ const createStyles = (colors) =>
       fontSize: 14,
       fontWeight: "600",
     },
-    // Estilos de modalInfo eliminados - ya no se usa
   });
 
 export default MiniCalendario;

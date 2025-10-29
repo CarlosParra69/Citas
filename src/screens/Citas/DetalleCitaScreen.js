@@ -24,7 +24,7 @@ const DetalleCitaScreen = ({ route, navigation }) => {
   const globalStyles = useGlobalStyles();
   const { citaId } = route.params;
   const styles = createStyles(colors);
-  const { eliminarCita, aprobarCitaPendiente, rechazarCitaPendiente } =
+  const { eliminarCita, aprobarCitaPendiente, rechazarCitaPendiente, destroyCitaById } =
     useCitas();
   const { user } = useAuthContext();
   const [cita, setCita] = useState(null);
@@ -32,8 +32,7 @@ const DetalleCitaScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
   const [rejectionModalVisible, setRejectionModalVisible] = useState(false);
-  const [cancellationModalVisible, setCancellationModalVisible] =
-    useState(false);
+  const [cancellationModalVisible, setCancellationModalVisible] = useState(false);
 
   useEffect(() => {
     loadCitaDetail();
@@ -111,6 +110,44 @@ const DetalleCitaScreen = ({ route, navigation }) => {
 
   const canRejectCita = () => {
     return canApproveCita(); // Mismo criterio que aprobación
+  };
+
+  const canDestroyCita = () => {
+    if (!cita || !user) return false;
+    // Solo superadministradores pueden eliminar citas
+    return user.rol === "superadmin";
+  };
+
+  const handleDestroyCita = () => {
+    Alert.alert(
+      "Eliminar Cita",
+      "¿Estás seguro de que deseas eliminar esta cita? Esta acción no se puede deshacer.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: handleDestroyConfirm,
+        },
+      ]
+    );
+  };
+
+  const handleDestroyConfirm = async () => {
+    try {
+      await destroyCitaById(cita.id);
+      Alert.alert("Éxito", "Cita eliminada correctamente", [
+        {
+          text: "OK",
+          onPress: () => navigation.goBack(),
+        },
+      ]);
+    } catch (error) {
+      Alert.alert("Error", "No se pudo eliminar la cita");
+    }
   };
 
   const handleApprove = () => {
@@ -318,6 +355,15 @@ const DetalleCitaScreen = ({ route, navigation }) => {
             style={styles.cancelButton}
           />
         )}
+
+        {canDestroyCita() && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.destroyButton]}
+            onPress={handleDestroyCita}
+          >
+            <Text style={styles.destroyButtonText}>Eliminar Cita</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Modales */}
@@ -454,6 +500,19 @@ const createStyles = (colors) =>
     },
     cancelButton: {
       backgroundColor: colors.danger,
+    },
+    destroyButton: {
+      backgroundColor: colors.error || "#e74c3c",
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 8,
+      alignItems: "center",
+      marginTop: 12,
+    },
+    destroyButtonText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: "600",
     },
     errorContainer: {
       flex: 1,

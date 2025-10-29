@@ -74,3 +74,8 @@ export const confirmarCita = async (id) => {
   const response = await axiosInstance.patch(`/citas/${id}/confirmar`);
   return response.data;
 };
+
+export const destroyCita = async (id) => {
+  const response = await axiosInstance.delete(`/citas/${id}`);
+  return response.data;
+};
