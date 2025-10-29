@@ -14,19 +14,23 @@ import {
   destroyCita,
 } from "../api/citas";
 import { forceGetAllCitas } from "../api/forceGetCitas";
+import { forceGetAllCitasConfirmadas } from "../api/forceGetCitasConfirmadas";
 
 const CitasContext = createContext({
   citas: [],
   citasHoy: [],
   citasPendientes: [],
   forceCitas: [],
+  forceCitasConfirmadas: [],
   loading: false,
   forceLoading: false,
+  forceCitasConfirmadasLoading: false,
   error: null,
   fetchCitas: async () => {},
   fetchCitasHoy: async () => {},
   fetchCitasPendientes: async () => {},
   fetchForceCitas: async () => {},
+  fetchForceCitasConfirmadas: async () => {},
   agregarCita: async () => {},
   actualizarCita: async () => {},
   eliminarCita: async () => {},
@@ -36,6 +40,7 @@ const CitasContext = createContext({
   clearError: () => {},
   clearCitas: () => {},
   clearForceCitas: () => {},
+  clearForceCitasConfirmadas: () => {},
   destroyCitaById: async () => {},
 });
 
@@ -44,8 +49,10 @@ export const CitasProvider = ({ children }) => {
   const [citasHoy, setCitasHoy] = useState([]);
   const [citasPendientes, setCitasPendientes] = useState([]);
   const [forceCitas, setForceCitas] = useState([]);
+  const [forceCitasConfirmadas, setForceCitasConfirmadas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [forceLoading, setForceLoading] = useState(false);
+  const [forceCitasConfirmadasLoading, setForceCitasConfirmadasLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchCitas = async (user = null) => {
@@ -180,6 +187,32 @@ export const CitasProvider = ({ children }) => {
       setCitasPendientes([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchForceCitasConfirmadas = async (user = null) => {
+    try {
+      setForceCitasConfirmadasLoading(true);
+      setError(null);
+
+      // Solo permitir para superadministradores
+      if (user?.rol !== "superadmin") {
+        setForceCitasConfirmadas([]);
+        setForceCitasConfirmadasLoading(false);
+        return;
+      }
+
+      const citasData = await forceGetAllCitasConfirmadas();
+      setForceCitasConfirmadas(citasData);
+      
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
+      setError(errorMessage);
+      console.error("Error fetching force citas confirmadas:", err);
+      setForceCitasConfirmadas([]);
+    } finally {
+      setForceCitasConfirmadasLoading(false);
     }
   };
 
@@ -416,6 +449,10 @@ export const CitasProvider = ({ children }) => {
     setForceCitas([]);
   };
 
+  const clearForceCitasConfirmadas = () => {
+    setForceCitasConfirmadas([]);
+  };
+
   const destroyCitaById = async (id) => {
     try {
       setLoading(true);
@@ -449,13 +486,16 @@ export const CitasProvider = ({ children }) => {
         citasHoy,
         citasPendientes,
         forceCitas,
+        forceCitasConfirmadas,
         loading,
         forceLoading,
+        forceCitasConfirmadasLoading,
         error,
         fetchCitas,
         fetchCitasHoy,
         fetchCitasPendientes,
         fetchForceCitas,
+        fetchForceCitasConfirmadas,
         agregarCita,
         actualizarCita,
         eliminarCita,
@@ -467,6 +507,7 @@ export const CitasProvider = ({ children }) => {
         clearError,
         clearCitas,
         clearForceCitas,
+        clearForceCitasConfirmadas,
         destroyCitaById,
       }}
     >
@@ -487,13 +528,16 @@ export const useCitas = () => {
         citasHoy: [],
         citasPendientes: [],
         forceCitas: [],
+        forceCitasConfirmadas: [],
         loading: false,
         forceLoading: false,
+        forceCitasConfirmadasLoading: false,
         error: null,
         fetchCitas: async () => {},
         fetchCitasHoy: async () => {},
         fetchCitasPendientes: async () => {},
         fetchForceCitas: async () => {},
+        fetchForceCitasConfirmadas: async () => {},
         agregarCita: async () => {},
         actualizarCita: async () => {},
         eliminarCita: async () => {},
@@ -503,6 +547,7 @@ export const useCitas = () => {
         clearError: () => {},
         clearCitas: () => {},
         clearForceCitas: () => {},
+        clearForceCitasConfirmadas: () => {},
         destroyCitaById: async () => {},
       };
     }
@@ -514,13 +559,16 @@ export const useCitas = () => {
       citasHoy: [],
       citasPendientes: [],
       forceCitas: [],
+      forceCitasConfirmadas: [],
       loading: false,
       forceLoading: false,
+      forceCitasConfirmadasLoading: false,
       error: null,
       fetchCitas: async () => {},
       fetchCitasHoy: async () => {},
       fetchCitasPendientes: async () => {},
       fetchForceCitas: async () => {},
+      fetchForceCitasConfirmadas: async () => {},
       agregarCita: async () => {},
       actualizarCita: async () => {},
       eliminarCita: async () => {},
@@ -530,6 +578,7 @@ export const useCitas = () => {
       clearError: () => {},
       clearCitas: () => {},
       clearForceCitas: () => {},
+      clearForceCitasConfirmadas: () => {},
       destroyCitaById: async () => {},
     };
   }

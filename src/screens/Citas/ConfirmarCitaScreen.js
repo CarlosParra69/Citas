@@ -33,9 +33,13 @@ const ConfirmarCitaScreen = ({ navigation }) => {
     loading = false,
     error = null,
     fetchCitas = async () => {},
+    fetchForceCitasConfirmadas = async () => {},
+    forceCitasConfirmadas = [],
+    forceCitasConfirmadasLoading = false,
     confirmarCitaPendiente = async () => {},
     eliminarCita = async () => {},
     clearCitas = () => {},
+    clearForceCitasConfirmadas = () => {},
   } = citasContext || {};
 
   // Verificar si el usuario está disponible
@@ -50,12 +54,21 @@ const ConfirmarCitaScreen = ({ navigation }) => {
   useEffect(() => {
     // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
     clearCitas();
-    fetchCitas(user);
+    if (user?.rol === "superadmin") {
+      clearForceCitasConfirmadas();
+      fetchForceCitasConfirmadas(user);
+    } else {
+      fetchCitas(user);
+    }
   }, []);
 
   const loadCitasProgramadas = async () => {
     try {
-      await fetchCitas(user);
+      if (user?.rol === "superadmin") {
+        await fetchForceCitasConfirmadas(user);
+      } else {
+        await fetchCitas(user);
+      }
     } catch (error) {
       Alert.alert("Error", "No se pudieron cargar las citas programadas");
     }
@@ -63,7 +76,11 @@ const ConfirmarCitaScreen = ({ navigation }) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchCitas(user);
+    if (user?.rol === "superadmin") {
+      await fetchForceCitasConfirmadas(user);
+    } else {
+      await fetchCitas(user);
+    }
     setRefreshing(false);
   };
 
@@ -79,7 +96,13 @@ const ConfirmarCitaScreen = ({ navigation }) => {
             try {
               await confirmarCitaPendiente(citaId);
               Alert.alert("Éxito", "Cita confirmada correctamente");
-              // El contexto se actualiza automáticamente
+              
+              // Recargar automáticamente las citas según el rol
+              if (user?.rol === "superadmin") {
+                await fetchForceCitasConfirmadas(user);
+              } else {
+                await fetchCitas(user);
+              }
             } catch (error) {
               Alert.alert("Error", "No se pudo confirmar la cita");
             }
@@ -100,7 +123,13 @@ const ConfirmarCitaScreen = ({ navigation }) => {
       Alert.alert("Éxito", "Cita cancelada correctamente");
       setCancellationModalVisible(false);
       setSelectedCitaId(null);
-      // El contexto se actualiza automáticamente
+      
+      // Recargar automáticamente las citas según el rol
+      if (user?.rol === "superadmin") {
+        await fetchForceCitasConfirmadas(user);
+      } else {
+        await fetchCitas(user);
+      }
     } catch (error) {
       Alert.alert("Error", "No se pudo cancelar la cita");
     }
@@ -146,30 +175,43 @@ const ConfirmarCitaScreen = ({ navigation }) => {
     </View>
   );
 
-  if (loading && !refreshing) {
-    return <LoadingSpinner message="Cargando citas programadas..." />;
+  const displayLoading = (loading && !refreshing) || (forceCitasConfirmadasLoading && user?.rol === "superadmin");
+  if (displayLoading) {
+    return <LoadingSpinner message="Cargando citas confirmadas..." />;
   }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Confirmar Cita</Text>
       <Text style={styles.subtitle}>
-        Citas aprobadas por el médico, pendientes de tu confirmación
+        {user?.rol === "superadmin"
+          ? "Todas las citas confirmadas por médicos del sistema"
+          : "Citas aprobadas por el médico, pendientes de tu confirmación"
+        }
       </Text>
 
       {(() => {
-        // Filtrar citas programadas del paciente actual (ya filtradas por el backend)
-        const programadas = (citasContext?.citas || []).filter(
+        // Para superadmin, usar citas forzadas, para otros usuarios usar citas normales
+        const citasData = user?.rol === "superadmin" ? forceCitasConfirmadas : citasContext?.citas || [];
+        
+        // Filtrar citas programadas (estado "programada" = confirmadas por médico, pendientes de confirmación del paciente)
+        const programadas = citasData.filter(
           (cita) => cita.estado?.toLowerCase() === "programada"
         );
 
         return programadas.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>
-              No tienes citas pendientes de confirmación
+              {user?.rol === "superadmin"
+                ? "No hay citas confirmadas en el sistema"
+                : "No tienes citas pendientes de confirmación"
+              }
             </Text>
             <Text style={styles.emptySubtext}>
-              Las citas aprobadas por el médico aparecerán aquí
+              {user?.rol === "superadmin"
+                ? "Las citas confirmadas por los médicos aparecerán aquí"
+                : "Las citas aprobadas por el médico aparecerán aquí"
+              }
             </Text>
           </View>
         ) : (
@@ -192,7 +234,8 @@ const ConfirmarCitaScreen = ({ navigation }) => {
         onCancel={handleCancellationConfirm}
         cita={(() => {
           // Buscar la cita seleccionada para mostrar en el modal
-          const programadas = (citasContext?.citas || []).filter(
+          const citasData = user?.rol === "superadmin" ? forceCitasConfirmadas : citasContext?.citas || [];
+          const programadas = citasData.filter(
             (cita) => cita.estado?.toLowerCase() === "programada"
           );
           return programadas.find((cita) => cita.id === selectedCitaId);
