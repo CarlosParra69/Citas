@@ -51,7 +51,7 @@ const MisEstadisticasScreen = ({ navigation }) => {
   const loadEstadisticas = async () => {
     try {
       setLoading(true);
-      const response = await getEstadisticasMedico(user.id, selectedPeriod);
+      const response = await getEstadisticasMedico(user.medico_id || user.id, selectedPeriod);
 
       if (response.success) {
         setEstadisticas(response.data);
@@ -190,7 +190,7 @@ const MisEstadisticasScreen = ({ navigation }) => {
       <View style={styles.statsContainer}>
         {renderStatCard(
           "Citas Atendidas",
-          estadisticas.citas_atendidas || 0,
+          estadisticas.total_citas_completadas || 0,
           "Total de consultas completadas",
           colors.success
         )}
@@ -211,8 +211,8 @@ const MisEstadisticasScreen = ({ navigation }) => {
 
         {renderStatCard(
           "Promedio Diario",
-          estadisticas.promedio_diario || 0,
-          "Citas por día",
+          estadisticas.citas_mes_actual || 0,
+          "Citas por mes",
           colors.info
         )}
       </View>
@@ -233,30 +233,30 @@ const MisEstadisticasScreen = ({ navigation }) => {
         <View style={styles.additionalStatsGrid}>
           <View style={styles.additionalStatItem}>
             <Text style={styles.additionalStatValue}>
-              {estadisticas.tasa_asistencia || 0}%
+              {estadisticas.citas_mes_actual || 0}
             </Text>
-            <Text style={styles.additionalStatLabel}>Tasa de Asistencia</Text>
+            <Text style={styles.additionalStatLabel}>Citas del Mes</Text>
           </View>
 
           <View style={styles.additionalStatItem}>
             <Text style={styles.additionalStatValue}>
-              {estadisticas.tiempo_promedio || 0}min
+              {estadisticas.citas_ano_actual || 0}
             </Text>
-            <Text style={styles.additionalStatLabel}>Tiempo Promedio</Text>
+            <Text style={styles.additionalStatLabel}>Citas del Año</Text>
           </View>
 
           <View style={styles.additionalStatItem}>
             <Text style={styles.additionalStatValue}>
-              {estadisticas.pacientes_unicos || 0}
+              {estadisticas.citas_no_asistio || 0}
             </Text>
-            <Text style={styles.additionalStatLabel}>Pacientes Únicos</Text>
+            <Text style={styles.additionalStatLabel}>No Asistieron</Text>
           </View>
 
           <View style={styles.additionalStatItem}>
             <Text style={styles.additionalStatValue}>
-              ${estadisticas.ingresos_totales || 0}
+              ${estadisticas.ingresos_mes || 0}
             </Text>
-            <Text style={styles.additionalStatLabel}>Ingresos Totales</Text>
+            <Text style={styles.additionalStatLabel}>Ingresos del Mes</Text>
           </View>
         </View>
       </View>

@@ -43,13 +43,18 @@ const GestionMedicosScreen = ({ navigation }) => {
           ]
         );
       }
-    }, [user])
+    }, [user, selectedEstado])
   );
 
   const loadMedicos = async () => {
     try {
       setLoading(true);
-      const response = await getMedicos();
+      const filters = {};
+      // Solo enviar filtro si no es "todos"
+      if (selectedEstado !== "todos") {
+        filters.activo = selectedEstado === "activo" ? 1 : 0;
+      }
+      const response = await getMedicos(filters);
       if (response.success) {
         setMedicos(response.data || []);
       } else {
@@ -69,9 +74,9 @@ const GestionMedicosScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleToggleEstado = async (medicoId, currentEstado) => {
-    const newEstado = currentEstado === "activo" ? "inactivo" : "activo";
-    const actionText = newEstado === "activo" ? "activar" : "desactivar";
+  const handleToggleEstado = async (medicoId, currentActivo) => {
+    const newActivo = !currentActivo;
+    const actionText = newActivo ? "activar" : "desactivar";
 
     Alert.alert(
       `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} médico?`,
@@ -83,20 +88,30 @@ const GestionMedicosScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const response = await updateMedico(medicoId, {
-                estado: newEstado,
+                activo: newActivo,
               });
               if (response.success) {
+                // También actualizar el estado del usuario correspondiente
+                if (response.data?.user?.id) {
+                  try {
+                    const { cambiarEstadoUsuario } = await import("../../api/usuarios");
+                    await cambiarEstadoUsuario(response.data.user.id, newActivo ? 1 : 0);
+                  } catch (userError) {
+                    console.warn("No se pudo actualizar el estado del usuario:", userError);
+                  }
+                }
+
                 setMedicos((prev) =>
                   prev.map((medico) =>
                     medico.id === medicoId
-                      ? { ...medico, estado: newEstado }
+                      ? { ...medico, activo: newActivo }
                       : medico
                   )
                 );
                 Alert.alert(
                   "Éxito",
                   `Médico ${
-                    newEstado === "activo" ? "activado" : "desactivado"
+                    newActivo ? "activado" : "desactivado"
                   } correctamente`
                 );
               } else {
@@ -140,7 +155,18 @@ const GestionMedicosScreen = ({ navigation }) => {
               }
             } catch (error) {
               console.error("Error deleting medico:", error);
-              Alert.alert("Error", "No se pudo eliminar el médico");
+              // Verificar si es un error de restricción de foreign key
+              if (error.response?.data?.message?.includes('foreign key constraint') ||
+                  error.response?.data?.message?.includes('Cannot delete or update a parent row') ||
+                  error.message?.includes('foreign key constraint') ||
+                  error.message?.includes('Cannot delete or update a parent row')) {
+                Alert.alert(
+                  "No se puede eliminar",
+                  "Este médico tiene citas o historiales médicos asociados. Debe eliminar o reasignar estos registros primero."
+                );
+              } else {
+                Alert.alert("Error", "No se pudo eliminar el médico");
+              }
             }
           },
         },
@@ -149,9 +175,7 @@ const GestionMedicosScreen = ({ navigation }) => {
   };
 
   const handleCreateMedico = () => {
-    navigation.navigate("MedicosNavigator", {
-      screen: "CrearMedicoScreen",
-    });
+    navigation.navigate("CrearMedicoScreen");
   };
 
   const filteredMedicos = (Array.isArray(medicos) ? medicos : []).filter(
@@ -165,14 +189,16 @@ const GestionMedicosScreen = ({ navigation }) => {
         );
 
       const matchesEstado =
-        selectedEstado === "todos" || medico.estado === selectedEstado;
+        selectedEstado === "todos" ||
+        (selectedEstado === "activo" && medico.activo) ||
+        (selectedEstado === "inactivo" && !medico.activo);
 
       return matchesSearch && matchesEstado;
     }
   );
 
-  const getEstadoColor = (estado) => {
-    return estado === "activo" ? colors.success : colors.error;
+  const getEstadoColor = (activo) => {
+    return activo ? colors.success : colors.error;
   };
 
   const renderMedicoItem = ({ item }) => (
@@ -205,13 +231,11 @@ const GestionMedicosScreen = ({ navigation }) => {
           <View
             style={[
               styles.estadoBadge,
-              { backgroundColor: getEstadoColor(item.estado) },
+              { backgroundColor: getEstadoColor(item.activo) },
             ]}
           >
             <Text style={styles.estadoText}>
-              {item.estado
-                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
-                : "Sin estado"}
+              {item.activo ? "Activo" : "Inactivo"}
             </Text>
           </View>
         </View>
@@ -230,10 +254,7 @@ const GestionMedicosScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() =>
-            navigation.navigate("MedicosNavigator", {
-              screen: "CrearMedicoScreen",
-              params: { medico: item },
-            })
+            navigation.navigate("CrearMedicoScreen", { medico: item })
           }
         >
           <Text style={styles.editButtonText}>Editar</Text>
@@ -242,14 +263,14 @@ const GestionMedicosScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[
             styles.actionButton,
-            item.estado === "activo"
+            item.activo
               ? styles.deactivateButton
               : styles.activateButton,
           ]}
-          onPress={() => handleToggleEstado(item.id, item.estado)}
+          onPress={() => handleToggleEstado(item.id, item.activo)}
         >
           <Text style={styles.toggleButtonText}>
-            {item.estado === "activo" ? "Desactivar" : "Activar"}
+            {item.activo ? "Desactivar" : "Activar"}
           </Text>
         </TouchableOpacity>
 
@@ -377,7 +398,7 @@ const createStyles = (colors) =>
       flex: 1,
     },
     createButton: {
-      backgroundColor: colors.success,
+      backgroundColor: colors.primary,
       minWidth: 120,
     },
     searchContainer: {

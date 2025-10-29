@@ -16,6 +16,10 @@ export const createPaciente = (pacienteData) => {
   return axiosInstance.post("/pacientes", pacienteData);
 };
 
+export const registerPaciente = (pacienteData) => {
+  return axiosInstance.post("/pacientes/register", pacienteData);
+};
+
 export const updatePaciente = (id, pacienteData) => {
   return axiosInstance.put(`/pacientes/${id}`, pacienteData);
 };

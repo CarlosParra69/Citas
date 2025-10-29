@@ -28,7 +28,7 @@ const CrearUsuarioScreen = ({ navigation }) => {
     telefono: "",
     fecha_nacimiento: "",
     genero: "M",
-    rol: "paciente",
+    rol: "superadmin",
     password: "",
     password_confirmation: "",
   });
@@ -139,44 +139,35 @@ const CrearUsuarioScreen = ({ navigation }) => {
       const response = await createUsuario(dataToSend);
 
       if (response.data.success) {
-        Alert.alert("Éxito", "Usuario creado exitosamente", [
+        Alert.alert("Éxito", "Superadmin creado exitosamente", [
           {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
         ]);
       } else {
-        throw new Error(response.data.message || "Error al crear usuario");
+        throw new Error(response.data.message || "Error al crear superadmin");
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       Alert.alert("Error", errorMessage);
-      console.error("Error creating usuario:", err);
+      console.error("Error creating superadmin:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Determinar roles disponibles según el rol del usuario actual
+  // Solo permite crear superadmin
   const getAvailableRoles = () => {
-    if (user?.rol === "superadmin") {
-      return [
-        { label: "Paciente", value: "paciente" },
-        { label: "Médico", value: "medico" },
-        { label: "Superadmin", value: "superadmin" },
-      ];
-    } else if (user?.rol === "medico") {
-      return [{ label: "Paciente", value: "paciente" }];
-    }
-    return [];
+    return [{ label: "Superadmin", value: "superadmin" }];
   };
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Crear Nuevo Usuario</Text>
-        <Text style={styles.subtitle}>Completa la información del usuario</Text>
+        <Text style={styles.title}>Crear Superadmin</Text>
+        <Text style={styles.subtitle}>Completa la información del superadmin</Text>
 
         {/* Información básica */}
         <View style={styles.section}>
@@ -246,31 +237,6 @@ const CrearUsuarioScreen = ({ navigation }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Información de Cuenta</Text>
 
-          <View style={styles.roleSelector}>
-            <Text style={styles.roleLabel}>Rol del Usuario *</Text>
-            <View style={styles.roleButtons}>
-              {getAvailableRoles().map((role) => (
-                <TouchableOpacity
-                  key={role.value}
-                  style={[
-                    styles.roleButton,
-                    formData.rol === role.value && styles.activeRoleButton,
-                  ]}
-                  onPress={() => handleInputChange("rol", role.value)}
-                >
-                  <Text
-                    style={[
-                      styles.roleButtonText,
-                      formData.rol === role.value &&
-                        styles.activeRoleButtonText,
-                    ]}
-                  >
-                    {role.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
 
           <InputField
             label="Contraseña *"
@@ -296,7 +262,7 @@ const CrearUsuarioScreen = ({ navigation }) => {
         </View>
 
         <ButtonPrimary
-          title="Crear Usuario"
+          title="Crear Superadmin"
           onPress={handleSubmit}
           loading={loading}
           style={styles.submitButton}

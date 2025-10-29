@@ -4,7 +4,7 @@ export const getUsuarios = async (filters = {}) => {
   const params = new URLSearchParams();
 
   if (filters.rol) params.append("rol", filters.rol);
-  if (filters.estado) params.append("estado", filters.estado);
+  if (filters.activo !== undefined) params.append("activo", filters.activo);
   if (filters.search) params.append("search", filters.search);
 
   const response = await axiosInstance.get(`/usuarios?${params.toString()}`);
@@ -31,9 +31,9 @@ export const deleteUsuario = async (id) => {
   return response.data;
 };
 
-export const cambiarEstadoUsuario = async (id, estado) => {
-  const response = await axiosInstance.patch(`/usuarios/${id}/estado`, {
-    estado,
+export const cambiarEstadoUsuario = async (id, activo) => {
+  const response = await axiosInstance.patch(`/usuarios/${id}`, {
+    activo,
   });
   return response.data;
 };

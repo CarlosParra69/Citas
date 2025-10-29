@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   View,
   ScrollView,
@@ -6,14 +6,16 @@ import {
   Text,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import Loader from "../../components/Loader";
-import ButtonPrimary from "../../components/ButtonPrimary";
 import CardItem from "../../components/CardItem";
 import { formatDate, formatCitaDateTime } from "../../utils/formatDate";
 import { useCitas } from "../../context/CitasContext";
 import { useThemeColors } from "../../utils/themeColors";
 import { useAuthContext } from "../../context/AuthContext";
+import { useFocusEffect } from "@react-navigation/native";
 
 const CitasScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -23,11 +25,29 @@ const CitasScreen = ({ navigation }) => {
     useCitas();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
-    clearCitas();
-    loadCitas();
-  }, []);
+  // Función para crear botones con iconos usando TouchableOpacity
+  const renderButtonWithIcon = (title, onPress, iconName, style) => {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        style={[styles.actionButton, style]}
+      >
+        <View style={styles.buttonContent}>
+          <Ionicons name={iconName} size={20} color={colors.white} />
+          <Text style={styles.buttonText}>{title}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Actualizar automáticamente cuando la pantalla gane el foco
+  useFocusEffect(
+    useCallback(() => {
+      // Limpiar citas anteriores para evitar mostrar datos de otros usuarios
+      clearCitas();
+      loadCitas();
+    }, [user]) // Solo dependemos del usuario
+  );
 
   useEffect(() => {
     if (error) {
@@ -105,29 +125,73 @@ const CitasScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Mis Citas Médicas</Text>
 
-      <View style={styles.buttonContainer}>
+      <View style={styles.buttonsGridContainer}>
+        {user?.rol === "superadmin" && (
+          <>
+            <View style={styles.buttonRow}>
+              {renderButtonWithIcon(
+                "Citas de Hoy",
+                () => navigation.navigate("CitasHoyScreen"),
+                "calendar",
+                styles.citasHoyButton
+              )}
+              {renderButtonWithIcon(
+                "Citas por Aprobar",
+                () => navigation.navigate("CitasPendientesScreen"),
+                "time",
+                styles.citasPendientesButton
+              )}
+            </View>
+            <View style={styles.buttonRow}>
+              {renderButtonWithIcon(
+                "Nueva Cita",
+                () => navigation.navigate("CrearCitaScreen"),
+                "add-circle",
+                styles.nuevaCitaButton
+              )}
+              {renderButtonWithIcon(
+                "Confirmar Cita",
+                () => navigation.navigate("ConfirmarCitaScreen"),
+                "checkmark-circle",
+                styles.confirmarCitaButton
+              )}
+            </View>
+          </>
+        )}
         {user?.rol === "medico" && (
           <>
-            <ButtonPrimary
-              title="Citas de Hoy"
-              onPress={() => navigation.navigate("CitasHoyScreen")}
-            />
-            <ButtonPrimary
-              title="Citas por Aprobar"
-              onPress={() => navigation.navigate("CitasPendientesScreen")}
-            />
+            <View style={styles.buttonRow}>
+              {renderButtonWithIcon(
+                "Citas de Hoy",
+                () => navigation.navigate("CitasHoyScreen"),
+                "calendar",
+                styles.citasHoyButton
+              )}
+              {renderButtonWithIcon(
+                "Citas por Aprobar",
+                () => navigation.navigate("CitasPendientesScreen"),
+                "time",
+                styles.citasPendientesButton
+              )}
+            </View>
           </>
         )}
         {user?.rol === "paciente" && (
           <>
-            <ButtonPrimary
-              title="Nueva Cita"
-              onPress={() => navigation.navigate("CrearCitaScreen")}
-            />
-            <ButtonPrimary
-              title="Confirmar Cita"
-              onPress={() => navigation.navigate("ConfirmarCitaScreen")}
-            />
+            <View style={styles.buttonRow}>
+              {renderButtonWithIcon(
+                "Nueva Cita",
+                () => navigation.navigate("CrearCitaScreen"),
+                "add-circle",
+                styles.nuevaCitaButton
+              )}
+              {renderButtonWithIcon(
+                "Confirmar Cita",
+                () => navigation.navigate("ConfirmarCitaScreen"),
+                "checkmark-circle",
+                styles.confirmarCitaButton
+              )}
+            </View>
           </>
         )}
       </View>
@@ -153,7 +217,6 @@ const CitasScreen = ({ navigation }) => {
   );
 };
 
-// Create styles function that uses theme colors
 const createStyles = (colors) =>
   StyleSheet.create({
     container: {
@@ -168,11 +231,56 @@ const createStyles = (colors) =>
       marginBottom: 16,
       textAlign: "center",
     },
-    buttonContainer: {
-      marginBottom: 16,
+    buttonsGridContainer: {
+      marginBottom: 20,
+      gap: 12,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 12,
+    },
+    actionButton: {
+      flex: 1,
+      minHeight: 60,
+      borderRadius: 12,
+      elevation: 2,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      shadowColor: "#000",
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    buttonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    buttonText: {
+      color: colors.white,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    citasHoyButton: {
+      backgroundColor: colors.primary || "#FF6B35",
+    },
+    citasPendientesButton: {
+      backgroundColor: colors.warning || "#FF9800",
+    },
+    nuevaCitaButton: {
+      backgroundColor: colors.success || "#4CAF50",
+    },
+    confirmarCitaButton: {
+      backgroundColor: colors.info || "#2196F3",
     },
     citasList: {
-      marginTop: 16,
+      marginTop: 8,
     },
     emptyContainer: {
       flex: 1,

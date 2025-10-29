@@ -2,7 +2,7 @@ import axiosInstance from "../utils/axiosInstance";
 
 export const getEstadisticasMedico = async (medicoId, periodo = "mes") => {
   const response = await axiosInstance.get(
-    `/estadisticas/medico/${medicoId}?periodo=${periodo}`
+    `/reportes/estadisticas-medico/${medicoId}?periodo=${periodo}`
   );
   return response.data;
 };

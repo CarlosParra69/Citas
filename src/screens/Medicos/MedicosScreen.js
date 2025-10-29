@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -6,6 +6,7 @@ import {
   Text,
   RefreshControl,
   Alert,
+  TextInput,
 } from "react-native";
 import { getMedicos } from "../../api/medicos";
 import LoadingSpinner from "../../components/LoadingSpinner";
@@ -13,6 +14,7 @@ import CardItem from "../../components/CardItem";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
 import { useRoleBasedData } from "../../hooks/useRoleBasedData";
+import { useFocusEffect } from "@react-navigation/native";
 
 const MedicosScreen = ({ route, navigation }) => {
   const colors = useThemeColors();
@@ -21,13 +23,18 @@ const MedicosScreen = ({ route, navigation }) => {
   const { isSuperadmin } = useRoleBasedData();
 
   const [medicos, setMedicos] = useState([]);
+  const [filteredMedicos, setFilteredMedicos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [searchText, setSearchText] = useState("");
 
-  useEffect(() => {
-    loadMedicos();
-  }, [especialidadId]);
+  // Actualizar automáticamente cuando la pantalla gane el foco
+  useFocusEffect(
+    useCallback(() => {
+      loadMedicos();
+    }, [especialidadId])
+  );
 
   useEffect(() => {
     if (error) {
@@ -35,6 +42,10 @@ const MedicosScreen = ({ route, navigation }) => {
       setError(null);
     }
   }, [error]);
+
+  useEffect(() => {
+    filterMedicos();
+  }, [searchText, medicos]);
 
   const loadMedicos = async () => {
     try {
@@ -56,6 +67,29 @@ const MedicosScreen = ({ route, navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterMedicos = () => {
+    const medicosArray = Array.isArray(medicos) ? medicos : [];
+
+    if (!searchText.trim()) {
+      setFilteredMedicos(medicosArray);
+      return;
+    }
+
+    const filtered = medicosArray.filter((medico) => {
+      const searchLower = searchText.toLowerCase();
+      const nombreCompleto =
+        (medico.nombre_completo || `${medico.nombre} ${medico.apellido}`).toLowerCase();
+      const registroMedico = medico.registro_medico?.toString() || "";
+
+      return (
+        nombreCompleto.includes(searchLower) ||
+        registroMedico.includes(searchText)
+      );
+    });
+
+    setFilteredMedicos(filtered);
   };
 
   const onRefresh = async () => {
@@ -125,6 +159,17 @@ const MedicosScreen = ({ route, navigation }) => {
           : "Todos los médicos disponibles"}
       </Text>
 
+      {/* Barra de búsqueda */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar por nombre o registro médico..."
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholderTextColor={colors.gray}
+        />
+      </View>
+
       {/* Botón para crear médico - Solo visible para superadmin */}
       {isSuperadmin && (
         <View style={styles.createButtonContainer}>
@@ -136,18 +181,24 @@ const MedicosScreen = ({ route, navigation }) => {
         </View>
       )}
 
-      {!medicos || medicos.length === 0 ? (
+      {!filteredMedicos || filteredMedicos.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No hay médicos disponibles</Text>
+          <Text style={styles.emptyText}>
+            {searchText
+              ? "No se encontraron médicos"
+              : "No hay médicos disponibles"}
+          </Text>
           <Text style={styles.emptySubtext}>
-            {especialidadNombre
-              ? `No hay médicos disponibles para ${especialidadNombre}`
-              : "No hay médicos registrados en el sistema"}
+            {searchText
+              ? "Intenta con otro término de búsqueda"
+              : especialidadNombre
+                ? `No hay médicos disponibles para ${especialidadNombre}`
+                : "No hay médicos registrados en el sistema"}
           </Text>
         </View>
       ) : (
         <FlatList
-          data={medicos}
+          data={filteredMedicos}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderMedico}
           refreshControl={
@@ -160,7 +211,6 @@ const MedicosScreen = ({ route, navigation }) => {
   );
 };
 
-// Create styles function that uses theme colors
 const createStyles = (colors) =>
   StyleSheet.create({
     container: {
@@ -180,6 +230,18 @@ const createStyles = (colors) =>
       color: colors.gray,
       textAlign: "center",
       marginBottom: 20,
+    },
+    searchContainer: {
+      marginBottom: 16,
+    },
+    searchInput: {
+      backgroundColor: colors.input || colors.surface,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
     },
     createButtonContainer: {
       marginBottom: 16,

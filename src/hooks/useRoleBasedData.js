@@ -48,14 +48,14 @@ export const useRoleBasedData = () => {
 
             // Mapear los datos reales del backend a los nombres esperados por el frontend
             const mappedData = {
-              totalUsuarios: dashboardResponse.totalUsuarios || 0,
-              totalMedicos: dashboardResponse.total_medicos_activos || 0,
-              totalPacientes: dashboardResponse.total_pacientes_activos || 0,
-              ingresosMes: dashboardResponse.ingresos_mes || 0,
-              citasPorEstado: dashboardResponse.citasPorEstado || {},
-              actividadReciente: dashboardResponse.actividadReciente || [],
-              citasPendientes: dashboardResponse.citas_programadas_mes || 0,
-              citasHoy: dashboardResponse.citas_hoy || 0,
+              totalUsuarios: dashboardResponse.data.data.totalUsuarios || 0,
+              totalMedicos: dashboardResponse.data.data.total_medicos_activos || 0,
+              totalPacientes: dashboardResponse.data.data.total_pacientes_activos || 0,
+              ingresosMes: parseFloat(dashboardResponse.data.data.ingresos_mes) || 0,
+              citasPorEstado: dashboardResponse.data.data.citasPorEstado || {},
+              actividadReciente: dashboardResponse.data.data.actividadReciente || [],
+              citasPendientes: dashboardResponse.data.data.citas_programadas_mes || 0,
+              citasHoy: dashboardResponse.data.data.citas_hoy || 0,
             };
 
             setDashboardData(mappedData);
@@ -90,9 +90,8 @@ export const useRoleBasedData = () => {
               citasHoy: medicoData?.estadisticas?.citas_hoy || 0,
               proximasCitas: medicoData?.proximas_citas || [],
               estadisticasPersonales: {
-                citasCompletadas:
-                  medicoEstadisticas.data?.total_citas_completadas || 0,
-                promedioMensual: medicoEstadisticas.data?.citas_mes_actual || 0,
+                citasCompletadas: medicoData?.estadisticas?.citas_completadas_mes || 0,
+                promedioMensual: medicoData?.estadisticas?.citas_completadas_mes || 0,
               },
               agendaHoy: medicoData?.agenda_hoy || [],
             };

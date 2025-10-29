@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from "react-native";
 import InputField from "../../components/InputField";
 import ButtonPrimary from "../../components/ButtonPrimary";
@@ -53,6 +54,100 @@ const CrearCitaScreen = ({ navigation }) => {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [availabilityChecked, setAvailabilityChecked] = useState(false);
   const [isAvailable, setIsAvailable] = useState(false);
+
+  // Componente SelectModal para especialidades
+  const SelectModal = ({
+    options,
+    selectedValue,
+    onSelect,
+    placeholder,
+    label,
+    error
+  }) => {
+    const [modalVisible, setModalVisible] = useState(false);
+
+    const selectedOption = options.find(option => option.id === selectedValue);
+
+    return (
+      <View style={styles.selectContainer}>
+        {label && <Text style={styles.label}>{label}</Text>}
+        
+        <TouchableOpacity
+          style={[
+            styles.selectButton,
+            error && styles.selectButtonError,
+            modalVisible && styles.selectButtonActive
+          ]}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text
+            style={[
+              styles.selectButtonText,
+              !selectedOption && styles.selectButtonPlaceholder
+            ]}
+          >
+            {selectedOption ? selectedOption.nombre : placeholder}
+          </Text>
+          <Text style={styles.selectArrow}>▼</Text>
+        </TouchableOpacity>
+
+        {error && <Text style={styles.errorText}>{error}</Text>}
+
+        <Modal
+          visible={modalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Seleccionar {label}</Text>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.modalList}>
+                {options.map((option) => (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.modalOption,
+                      selectedValue === option.id && styles.modalOptionSelected
+                    ]}
+                    onPress={() => {
+                      onSelect(option.id);
+                      setModalVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.modalOptionText,
+                        selectedValue === option.id && styles.modalOptionTextSelected
+                      ]}
+                    >
+                      {option.nombre}
+                    </Text>
+                    {selectedValue === option.id && (
+                      <Text style={styles.checkmark}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      </View>
+    );
+  };
 
   useEffect(() => {
     loadInitialData();
@@ -322,33 +417,15 @@ const CrearCitaScreen = ({ navigation }) => {
         )}
 
         {/* Selector de Especialidad */}
-        <Text style={styles.label}>Especialidad</Text>
-        <View style={styles.pickerContainer}>
-          {especialidades.map((especialidad) => (
-            <TouchableOpacity
-              key={especialidad.id}
-              style={[
-                styles.optionButton,
-                selectedEspecialidad === especialidad.id &&
-                  styles.selectedOption,
-              ]}
-              onPress={() => setSelectedEspecialidad(especialidad.id)}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  selectedEspecialidad === especialidad.id &&
-                    styles.selectedOptionText,
-                ]}
-              >
-                {especialidad.nombre}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        {errors.especialidad && (
-          <Text style={styles.errorText}>{errors.especialidad}</Text>
-        )}
+        <SelectModal
+          options={especialidades}
+          selectedValue={selectedEspecialidad}
+          onSelect={setSelectedEspecialidad}
+          placeholder="Selecciona una especialidad"
+          label="Especialidad *"
+          error={errors.especialidad}
+          colors={colors}
+        />
 
         {/* Selector de Médico */}
         {selectedEspecialidad && (
@@ -513,6 +590,110 @@ const createStyles = (colors) =>
       fontSize: 12,
       color: colors.gray,
       marginTop: 2,
+    },
+    // Estilos para SelectModal
+    selectContainer: {
+      marginBottom: 16,
+    },
+    selectButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.input || colors.surface,
+    },
+    selectButtonError: {
+      borderColor: colors.error,
+    },
+    selectButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '10',
+    },
+    selectButtonText: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.text,
+    },
+    selectButtonPlaceholder: {
+      color: colors.gray,
+    },
+    selectArrow: {
+      fontSize: 12,
+      color: colors.gray,
+      marginLeft: 8,
+    },
+    // Estilos del modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalContent: {
+      backgroundColor: colors.background || colors.white,
+      borderRadius: 12,
+      width: '90%',
+      maxHeight: '70%',
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.25,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border || colors.lightGray,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    closeButton: {
+      padding: 4,
+    },
+    closeButtonText: {
+      fontSize: 18,
+      color: colors.gray,
+      fontWeight: 'bold',
+    },
+    modalList: {
+      maxHeight: 400,
+    },
+    modalOption: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border || colors.lightGray,
+    },
+    modalOptionSelected: {
+      backgroundColor: colors.primary + '20',
+    },
+    modalOptionText: {
+      fontSize: 16,
+      color: colors.text,
+      flex: 1,
+    },
+    modalOptionTextSelected: {
+      color: colors.primary,
+      fontWeight: '600',
+    },
+    checkmark: {
+      fontSize: 16,
+      color: colors.primary,
+      fontWeight: 'bold',
     },
   });
 

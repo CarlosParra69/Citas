@@ -117,19 +117,6 @@ const PacienteDetailScreen = ({ route, navigation }) => {
     setRefreshing(false);
   };
 
-  const handleAgendarCita = () => {
-    navigation.navigate("Citas", {
-      screen: "CrearCitaScreen",
-      params: { preselectedPaciente: pacienteId },
-    });
-  };
-
-  const handleEditarPaciente = () => {
-    navigation.navigate("EditarPacienteScreen", {
-      pacienteId: pacienteId,
-      pacienteData: paciente,
-    });
-  };
 
   const calcularEdad = (fechaNacimiento) => {
     if (!fechaNacimiento) return "No especificada";
@@ -345,20 +332,6 @@ const PacienteDetailScreen = ({ route, navigation }) => {
           )}
         </View>
 
-        {/* Botones de acción */}
-        <View style={styles.actionsContainer}>
-          <ButtonPrimary
-            title="Agendar Nueva Cita"
-            onPress={handleAgendarCita}
-            style={styles.actionButton}
-          />
-
-          <ButtonPrimary
-            title="Editar Información"
-            onPress={handleEditarPaciente}
-            style={[styles.actionButton, styles.secondaryButton]}
-          />
-        </View>
       </ScrollView>
     </View>
   );

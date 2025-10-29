@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   FlatList,
@@ -13,6 +13,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import CardItem from "../../components/CardItem";
 import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
+import { useFocusEffect } from "@react-navigation/native";
 
 const PacientesScreen = ({ navigation }) => {
   const colors = useThemeColors();
@@ -24,9 +25,12 @@ const PacientesScreen = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState("");
 
-  useEffect(() => {
-    loadPacientes();
-  }, []);
+  // Actualizar automáticamente cuando la pantalla gane el foco
+  useFocusEffect(
+    useCallback(() => {
+      loadPacientes();
+    }, [])
+  );
 
   useEffect(() => {
     if (error) {
@@ -162,12 +166,14 @@ const PacientesScreen = ({ navigation }) => {
         />
       </View>
 
-      {/* Botón crear paciente */}
-      <ButtonPrimary
-        title="Crear Nuevo Paciente"
-        onPress={handleCrearPaciente}
-        style={styles.createButton}
-      />
+      {/* Botón para crear paciente */}
+      <View style={styles.createButtonContainer}>
+        <ButtonPrimary
+          title="+ Crear Paciente"
+          onPress={handleCrearPaciente}
+          style={styles.createButton}
+        />
+      </View>
 
       {!filteredPacientes || filteredPacientes.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -230,8 +236,13 @@ const createStyles = (colors) =>
       borderColor: colors.border,
       color: colors.text,
     },
-    createButton: {
+    createButtonContainer: {
       marginBottom: 16,
+      alignItems: "center",
+    },
+    createButton: {
+      minWidth: 150,
+      backgroundColor: colors.primary,
     },
     emptyContainer: {
       flex: 1,

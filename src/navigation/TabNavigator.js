@@ -80,6 +80,7 @@ export default function TabNavigator() {
             name="Especialidades"
             component={EspecialidadesNavigator}
           />
+          <Tab.Screen name="Pacientes" component={PacientesNavigator} />
           <Tab.Screen
             name="Administración"
             component={AdministracionNavigator}

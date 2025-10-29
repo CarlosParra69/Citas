@@ -53,8 +53,10 @@ const GestionPacientesScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await getPacientes();
-      if (response.success) {
-        setPacientes(response.data || []);
+      if (response.data?.success) {
+        // La API devuelve datos paginados, necesitamos acceder a response.data.data.data
+        const pacientesData = response.data?.data?.data || [];
+        setPacientes(pacientesData);
       } else {
         Alert.alert("Error", "No se pudieron cargar los pacientes");
       }
@@ -86,7 +88,7 @@ const GestionPacientesScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const response = await updatePaciente(pacienteId, {
-                estado: newEstado,
+                activo: newEstado === "activo" ? 1 : 0,
               });
               if (response.success) {
                 setPacientes((prev) =>
@@ -161,14 +163,16 @@ const GestionPacientesScreen = ({ navigation }) => {
         paciente.telefono?.includes(searchQuery);
 
       const matchesEstado =
-        selectedEstado === "todos" || paciente.estado === selectedEstado;
+        selectedEstado === "todos" ||
+        (selectedEstado === "activo" && paciente.activo) ||
+        (selectedEstado === "inactivo" && !paciente.activo);
 
       return matchesSearch && matchesEstado;
     }
   );
 
-  const getEstadoColor = (estado) => {
-    return estado === "activo" ? colors.success : colors.error;
+  const getEstadoColor = (activo) => {
+    return activo ? colors.success : colors.error;
   };
 
   const getGeneroText = (genero) => {
@@ -216,13 +220,11 @@ const GestionPacientesScreen = ({ navigation }) => {
           <View
             style={[
               styles.estadoBadge,
-              { backgroundColor: getEstadoColor(item.estado) },
+              { backgroundColor: getEstadoColor(item.activo) },
             ]}
           >
             <Text style={styles.estadoText}>
-              {item.estado
-                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
-                : "Sin estado"}
+              {item.activo ? "Activo" : "Inactivo"}
             </Text>
           </View>
         </View>
@@ -232,7 +234,10 @@ const GestionPacientesScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.actionButton, styles.viewButton]}
           onPress={() =>
-            navigation.navigate("PacienteDetailScreen", { pacienteId: item.id })
+            navigation.navigate("PacienteDetailScreen", {
+              pacienteId: item.id,
+              pacienteNombre: `${item.nombre} ${item.apellido}`
+            })
           }
         >
           <Text style={styles.viewButtonText}>Ver Detalle</Text>
@@ -241,7 +246,7 @@ const GestionPacientesScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() =>
-            navigation.navigate("CrearPacienteScreen", { paciente: item })
+            navigation.navigate("EditUsuarioScreen", { usuarioId: item.user_id })
           }
         >
           <Text style={styles.editButtonText}>Editar</Text>
@@ -250,14 +255,14 @@ const GestionPacientesScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[
             styles.actionButton,
-            item.estado === "activo"
+            item.activo
               ? styles.deactivateButton
               : styles.activateButton,
           ]}
-          onPress={() => handleToggleEstado(item.id, item.estado)}
+          onPress={() => handleToggleEstado(item.id, item.activo ? "activo" : "inactivo")}
         >
           <Text style={styles.toggleButtonText}>
-            {item.estado === "activo" ? "Desactivar" : "Activar"}
+            {item.activo ? "Desactivar" : "Activar"}
           </Text>
         </TouchableOpacity>
 
@@ -320,9 +325,9 @@ const GestionPacientesScreen = ({ navigation }) => {
               >
                 {estado === "todos"
                   ? "Todos"
-                  : estado
-                  ? estado.charAt(0).toUpperCase() + estado.slice(1)
-                  : "Sin estado"}
+                  : estado === "activo"
+                    ? "Activos"
+                    : "Inactivos"}
               </Text>
             </TouchableOpacity>
           ))}

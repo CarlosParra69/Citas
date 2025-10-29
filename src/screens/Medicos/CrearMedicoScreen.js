@@ -28,10 +28,7 @@ import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
-import {
-  DateTimePickerAndroid,
-  DateTimePickerIOS,
-} from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 // Componente para seleccionar horarios con interfaz tipo alarma
 const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
@@ -91,16 +88,63 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
     setSelectedDay(dia);
     setSelectedSlot(slotIndex);
     setPickerMode(mode);
-
+    
     if (Platform.OS === "ios") {
       setShowTimePicker(true);
     } else {
-      DateTimePickerAndroid.open({
+      // Para Android usar DateTimePicker nativo
+      DateTimePicker.open({
         value: new Date(),
         onChange: handleTimeSelect,
         mode: "time",
         is24Hour: false,
+        display: "clock",
       });
+    }
+  };
+
+  // Generar opciones de hora cada 30 minutos
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const hourStr = hour.toString().padStart(2, '0');
+        const minuteStr = minute.toString().padStart(2, '0');
+        const timeString = `${hourStr}:${minuteStr}`;
+        
+        // Formatear manualmente para evitar problemas de redondeo
+        let displayTime;
+        if (hour === 0) {
+          displayTime = `12:${minuteStr} AM`;
+        } else if (hour < 12) {
+          displayTime = `${hourStr}:${minuteStr} AM`;
+        } else if (hour === 12) {
+          displayTime = `12:${minuteStr} PM`;
+        } else {
+          displayTime = `${(hour - 12).toString().padStart(2, '0')}:${minuteStr} PM`;
+        }
+        
+        options.push({
+          value: timeString,
+          label: displayTime
+        });
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
+
+  const handleTimeSelectiOS = (selectedTime) => {
+    if (selectedDay && selectedSlot !== null) {
+      const nuevosHorarios = { ...horarios };
+      if (!nuevosHorarios[selectedDay]) nuevosHorarios[selectedDay] = [];
+      if (!nuevosHorarios[selectedDay][selectedSlot]) {
+        nuevosHorarios[selectedDay][selectedSlot] = { inicio: "", fin: "" };
+      }
+      nuevosHorarios[selectedDay][selectedSlot][pickerMode] = selectedTime;
+      onHorariosChange(selectedDay, nuevosHorarios[selectedDay]);
+      setShowTimePicker(false);
     }
   };
 
@@ -196,12 +240,30 @@ const HorariosSelector = ({ horarios, onHorariosChange, error, colors }) => {
       ))}
 
       {showTimePicker && Platform.OS === "ios" && (
-        <DateTimePickerIOS
-          value={new Date()}
-          mode="time"
-          is24Hour={false}
-          onChange={handleTimeSelect}
-        />
+        <View style={componentStyles.timePickerOverlay}>
+          <View style={componentStyles.timePickerContainer}>
+            <Text style={componentStyles.timePickerTitle}>
+              Seleccionar {pickerMode === "inicio" ? "Hora de Inicio" : "Hora de Fin"}
+            </Text>
+            <ScrollView style={componentStyles.timeOptionsList}>
+              {timeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={componentStyles.timeOption}
+                  onPress={() => handleTimeSelectiOS(option.value)}
+                >
+                  <Text style={componentStyles.timeOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setShowTimePicker(false)}
+              style={componentStyles.timePickerCancelButton}
+            >
+              <Text style={componentStyles.timePickerCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
       {error && <Text style={componentStyles.errorText}>{error}</Text>}
@@ -270,6 +332,34 @@ const CrearMedicoScreen = ({ navigation, route }) => {
 
   const loadMedicoData = () => {
     if (medico) {
+      // Convertir horarios del formato string al formato array esperado por el componente
+      const horariosConvertidos = {
+        lunes: [],
+        martes: [],
+        miercoles: [],
+        jueves: [],
+        viernes: [],
+        sabado: [],
+        domingo: [],
+      };
+
+      if (medico.horarios_atencion) {
+        Object.keys(medico.horarios_atencion).forEach((dia) => {
+          const horariosDia = medico.horarios_atencion[dia];
+          if (Array.isArray(horariosDia) && horariosDia.length > 0) {
+            horariosConvertidos[dia] = horariosDia.map((horario) => {
+              if (typeof horario === "string" && horario.includes("-")) {
+                const [inicio, fin] = horario.split("-");
+                return { inicio, fin };
+              } else if (typeof horario === "object" && horario.inicio && horario.fin) {
+                return horario;
+              }
+              return { inicio: "", fin: "" };
+            });
+          }
+        });
+      }
+
       setFormData({
         nombre: medico.nombre || "",
         apellido: medico.apellido || "",
@@ -280,15 +370,7 @@ const CrearMedicoScreen = ({ navigation, route }) => {
         registro_medico: medico.registro_medico || "",
         tarifa_consulta: medico.tarifa_consulta || "",
         biografia: medico.biografia || "",
-        horarios_atencion: medico.horarios_atencion || {
-          lunes: [],
-          martes: [],
-          miercoles: [],
-          jueves: [],
-          viernes: [],
-          sabado: [],
-          domingo: [],
-        },
+        horarios_atencion: horariosConvertidos,
         activo: medico.activo !== undefined ? medico.activo : true,
       });
     }
@@ -953,6 +1035,57 @@ const createHorariosStyles = (colors) =>
       color: colors.error,
       fontSize: 12,
       marginTop: 4,
+    },
+    timePickerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    timePickerContainer: {
+      backgroundColor: colors.background || colors.white,
+      borderRadius: 12,
+      padding: 20,
+      width: '90%',
+      maxWidth: 350,
+    },
+    timePickerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    timePickerCancelButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    timePickerCancelText: {
+      color: colors.white,
+      fontSize: 16,
+      fontWeight: '600',
+      textAlign: 'center',
+    },
+    timeOptionsList: {
+      maxHeight: 300,
+      marginVertical: 10,
+    },
+    timeOption: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border || colors.lightGray,
+    },
+    timeOptionText: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
     },
   });
 

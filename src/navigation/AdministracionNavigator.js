@@ -2,9 +2,12 @@ import React from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import UsuariosScreen from "../screens/Auth/UsuariosScreen";
 import CrearUsuarioScreen from "../screens/Auth/CrearUsuarioScreen";
+import EditUsuarioScreen from "../screens/Auth/EditUsuarioScreen";
 import GestionMedicosScreen from "../screens/Medicos/GestionMedicosScreen";
 import GestionEspecialidadesScreen from "../screens/Especialidades/GestionEspecialidadesScreen";
 import GestionPacientesScreen from "../screens/Pacientes/GestionPacientesScreen";
+import PacienteDetailScreen from "../screens/Pacientes/PacienteDetailScreen";
+import MedicoDetailScreen from "../screens/Medicos/MedicoDetailScreen";
 import CrearMedicoScreen from "../screens/Medicos/CrearMedicoScreen";
 import CrearPacienteScreen from "../screens/Pacientes/CrearPacienteScreen";
 import { useThemeColors } from "../utils/themeColors";
@@ -35,7 +38,12 @@ export default function AdministracionNavigator() {
       <Stack.Screen
         name="CrearUsuarioScreen"
         component={CrearUsuarioScreen}
-        options={{ title: "Crear Usuario" }}
+        options={{ title: "Crear Superadmin" }}
+      />
+      <Stack.Screen
+        name="EditUsuarioScreen"
+        component={EditUsuarioScreen}
+        options={{ title: "Editar Usuario" }}
       />
       <Stack.Screen
         name="GestionMedicosScreen"
@@ -61,6 +69,20 @@ export default function AdministracionNavigator() {
         name="CrearPacienteScreen"
         component={CrearPacienteScreen}
         options={{ title: "Crear Paciente" }}
+      />
+      <Stack.Screen
+        name="PacienteDetailScreen"
+        component={PacienteDetailScreen}
+        options={({ route }) => ({
+          title: route.params?.pacienteNombre || "Detalle Paciente",
+        })}
+      />
+      <Stack.Screen
+        name="MedicoDetailScreen"
+        component={MedicoDetailScreen}
+        options={({ route }) => ({
+          title: route.params?.medicoNombre || "Detalle Médico",
+        })}
       />
     </Stack.Navigator>
   );

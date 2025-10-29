@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthContext } from "../../context/AuthContext";
-import { getUsuarios, updateUsuarioEstado } from "../../api/usuarios";
+import { getUsuarios, cambiarEstadoUsuario, deleteUsuario } from "../../api/usuarios";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import QuickActionCard from "../../components/QuickActionCard";
 import { useThemeColors } from "../../utils/themeColors";
@@ -24,15 +24,11 @@ const UsuariosScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("todos");
+  const [selectedEstado, setSelectedEstado] = useState("todos");
   const styles = React.useMemo(() => createStyles(colors), [colors]);
 
   // Acciones rápidas para superadmin
   const quickActions = [
-    {
-      title: "Crear Usuario",
-      subtitle: "Registrar nuevo usuario en el sistema",
-      onPress: () => navigation.navigate("CrearUsuarioScreen"),
-    },
     {
       title: "Gestionar Médicos",
       subtitle: "Administrar médicos del sistema",
@@ -47,6 +43,11 @@ const UsuariosScreen = ({ navigation }) => {
       title: "Gestionar Pacientes",
       subtitle: "Administrar pacientes del sistema",
       onPress: () => navigation.navigate("GestionPacientesScreen"),
+    },
+    {
+      title: "Crear Superadmin",
+      subtitle: "Registrar nuevo Administrador en el sistema",
+      onPress: () => navigation.navigate("CrearUsuarioScreen"),
     },
     {
       title: "Crear Médico",
@@ -76,13 +77,20 @@ const UsuariosScreen = ({ navigation }) => {
           ]
         );
       }
-    }, [user])
+    }, [user, selectedRole, selectedEstado])
   );
 
   const loadUsuarios = async () => {
     try {
       setLoading(true);
-      const response = await getUsuarios();
+      const filters = {};
+      if (selectedRole !== "todos") {
+        filters.rol = selectedRole;
+      }
+      if (selectedEstado !== "todos") {
+        filters.activo = selectedEstado === "activo" ? 1 : 0;
+      }
+      const response = await getUsuarios(filters);
       if (response.success) {
         setUsuarios(response.data || []);
       } else {
@@ -102,9 +110,9 @@ const UsuariosScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const toggleUsuarioEstado = async (usuarioId, currentEstado) => {
-    const newEstado = currentEstado === "activo" ? "inactivo" : "activo";
-    const actionText = newEstado === "activo" ? "activar" : "desactivar";
+  const toggleUsuarioEstado = async (usuarioId, currentActivo) => {
+    const newActivo = currentActivo ? 0 : 1;
+    const actionText = newActivo === 1 ? "activar" : "desactivar";
 
     Alert.alert(
       `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} usuario?`,
@@ -115,20 +123,20 @@ const UsuariosScreen = ({ navigation }) => {
           text: "Confirmar",
           onPress: async () => {
             try {
-              const response = await updateUsuarioEstado(usuarioId, newEstado);
+              const response = await cambiarEstadoUsuario(usuarioId, newActivo);
               if (response.success) {
                 // Actualizar el estado local
                 setUsuarios((prevUsuarios) =>
                   prevUsuarios.map((usuario) =>
                     usuario.id === usuarioId
-                      ? { ...usuario, estado: newEstado }
+                      ? { ...usuario, activo: newActivo === 1 }
                       : usuario
                   )
                 );
                 Alert.alert(
                   "Éxito",
                   `Usuario ${
-                    newEstado === "activo" ? "activado" : "desactivado"
+                    newActivo === 1 ? "activado" : "desactivado"
                   } correctamente`
                 );
               } else {
@@ -150,6 +158,41 @@ const UsuariosScreen = ({ navigation }) => {
     );
   };
 
+  const eliminarUsuario = async (usuarioId) => {
+    Alert.alert(
+      "¿Eliminar usuario?",
+      "¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await deleteUsuario(usuarioId);
+              if (response.success) {
+                // Remover el usuario de la lista local
+                setUsuarios((prevUsuarios) =>
+                  prevUsuarios.filter((usuario) => usuario.id !== usuarioId)
+                );
+                Alert.alert("Éxito", "Usuario eliminado correctamente");
+              } else {
+                Alert.alert("Error", "No se pudo eliminar el usuario");
+              }
+            } catch (error) {
+              console.error("Error deleting usuario:", error);
+              Alert.alert("Error", "No se pudo eliminar el usuario");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const editarUsuario = (usuarioId) => {
+    navigation.navigate("EditUsuarioScreen", { usuarioId });
+  };
+
   const filteredUsuarios = usuarios.filter((usuario) => {
     const matchesSearch =
       usuario.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -160,7 +203,12 @@ const UsuariosScreen = ({ navigation }) => {
     const matchesRole =
       selectedRole === "todos" || usuario.rol === selectedRole;
 
-    return matchesSearch && matchesRole;
+    const matchesEstado =
+      selectedEstado === "todos" ||
+      (selectedEstado === "activo" && usuario.activo) ||
+      (selectedEstado === "inactivo" && !usuario.activo);
+
+    return matchesSearch && matchesRole && matchesEstado;
   });
 
   const getRoleColor = (rol) => {
@@ -176,8 +224,8 @@ const UsuariosScreen = ({ navigation }) => {
     }
   };
 
-  const getEstadoColor = (estado) => {
-    return estado === "activo" ? colors.success : colors.error;
+  const getEstadoColor = (activo) => {
+    return activo ? colors.success : colors.error;
   };
 
   const renderUsuarioItem = ({ item }) => (
@@ -210,32 +258,46 @@ const UsuariosScreen = ({ navigation }) => {
           <View
             style={[
               styles.estadoBadge,
-              { backgroundColor: getEstadoColor(item.estado) },
+              { backgroundColor: getEstadoColor(item.activo) },
             ]}
           >
             <Text style={styles.estadoBadgeText}>
-              {item.estado
-                ? item.estado.charAt(0).toUpperCase() + item.estado.slice(1)
-                : "Sin estado"}
+              {item.activo ? "Activo" : "Inactivo"}
             </Text>
           </View>
         </View>
       </View>
 
       <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            item.estado === "activo"
-              ? styles.deactivateButton
-              : styles.activateButton,
-          ]}
-          onPress={() => toggleUsuarioEstado(item.id, item.estado)}
-        >
-          <Text style={styles.actionButtonText}>
-            {item.estado === "activo" ? "Desactivar" : "Activar"}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => editarUsuario(item.id)}
+          >
+            <Text style={styles.actionButtonText}>Editar</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              item.activo
+                ? styles.deactivateButton
+                : styles.activateButton,
+            ]}
+            onPress={() => toggleUsuarioEstado(item.id, item.activo)}
+          >
+            <Text style={styles.actionButtonText}>
+              {item.activo ? "Desactivar" : "Activar"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={() => eliminarUsuario(item.id)}
+          >
+            <Text style={styles.actionButtonText}>Eliminar</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -243,7 +305,7 @@ const UsuariosScreen = ({ navigation }) => {
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyText}>
-        {searchQuery || selectedRole !== "todos"
+        {searchQuery || selectedRole !== "todos" || selectedEstado !== "todos"
           ? "No se encontraron usuarios con los filtros aplicados"
           : "No hay usuarios registrados"}
       </Text>
@@ -292,6 +354,33 @@ const UsuariosScreen = ({ navigation }) => {
                   : role
                   ? role.charAt(0).toUpperCase() + role.slice(1)
                   : "Sin rol"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Filtros por estado */}
+        <View style={styles.filtersContainer}>
+          {["todos", "activo", "inactivo"].map((estado) => (
+            <TouchableOpacity
+              key={estado}
+              style={[
+                styles.filterButton,
+                selectedEstado === estado && styles.activeFilterButton,
+              ]}
+              onPress={() => setSelectedEstado(estado)}
+            >
+              <Text
+                style={[
+                  styles.filterButtonText,
+                  selectedEstado === estado && styles.activeFilterButtonText,
+                ]}
+              >
+                {estado === "todos"
+                  ? "Todos"
+                  : estado === "activo"
+                  ? "Activos"
+                  : "Inactivos"}
               </Text>
             </TouchableOpacity>
           ))}
@@ -495,21 +584,33 @@ const createStyles = (colors) =>
       borderTopColor: colors.lightGray,
       paddingTop: 12,
     },
+    actionsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      gap: 8,
+    },
     actionButton: {
+      flex: 1,
       paddingVertical: 8,
-      paddingHorizontal: 16,
+      paddingHorizontal: 12,
       borderRadius: 6,
       alignItems: "center",
+    },
+    editButton: {
+      backgroundColor: colors.info,
     },
     activateButton: {
       backgroundColor: colors.success,
     },
     deactivateButton: {
-      backgroundColor: colors.error,
+      backgroundColor: colors.warning,
+    },
+    deleteButton: {
+      backgroundColor: colors.danger,
     },
     actionButtonText: {
       color: colors.white,
-      fontSize: 14,
+      fontSize: 12,
       fontWeight: "600",
     },
     emptyContainer: {

@@ -19,7 +19,7 @@ const MiAgendaScreen = ({ navigation }) => {
   const colors = useThemeColors();
   const styles = createStyles(colors);
   const { user } = useAuthContext();
-  const { fetchCitasMedico, citasMedico, loading } = useCitas();
+  const { fetchCitas, citas, loading } = useCitas();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [viewMode, setViewMode] = useState("day"); // 'day', 'week', 'month'
@@ -37,7 +37,7 @@ const MiAgendaScreen = ({ navigation }) => {
     if (!user?.id) return;
 
     try {
-      await fetchCitasMedico(user.id);
+      await fetchCitas(user);
       // Filtrar y organizar citas según la vista seleccionada
       organizeAgendaData();
     } catch (error) {
@@ -47,13 +47,13 @@ const MiAgendaScreen = ({ navigation }) => {
   };
 
   const organizeAgendaData = () => {
-    if (!citasMedico) return;
+    if (!citas) return;
 
     let filteredCitas = [];
 
     switch (viewMode) {
       case "day":
-        filteredCitas = citasMedico.filter((cita) => {
+        filteredCitas = citas.filter((cita) => {
           const citaDate = new Date(cita.fecha_hora).toDateString();
           return citaDate === selectedDate.toDateString();
         });
@@ -64,7 +64,7 @@ const MiAgendaScreen = ({ navigation }) => {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6);
 
-        filteredCitas = citasMedico.filter((cita) => {
+        filteredCitas = citas.filter((cita) => {
           const citaDate = new Date(cita.fecha_hora);
           return citaDate >= weekStart && citaDate <= weekEnd;
         });
@@ -81,7 +81,7 @@ const MiAgendaScreen = ({ navigation }) => {
           0
         );
 
-        filteredCitas = citasMedico.filter((cita) => {
+        filteredCitas = citas.filter((cita) => {
           const citaDate = new Date(cita.fecha_hora);
           return citaDate >= monthStart && citaDate <= monthEnd;
         });

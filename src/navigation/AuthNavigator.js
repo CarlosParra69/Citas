@@ -1,5 +1,6 @@
 import { createStackNavigator } from "@react-navigation/stack";
 import LoginScreen from "../screens/Auth/LoginScreen";
+import RegisterScreen from "../screens/Auth/RegisterScreen";
 import ForgotPasswordScreen from "../screens/Auth/ForgotPasswordScreen";
 import ResetPasswordScreen from "../screens/Auth/ResetPasswordScreen";
 import { useThemeColors } from "../utils/themeColors";
@@ -36,6 +37,11 @@ export default function AuthNavigator() {
         name="Login"
         component={LoginScreen}
         options={{ title: "Iniciar Sesión" }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ title: "Registrarse" }}
       />
       <Stack.Screen
         name="ForgotPassword"

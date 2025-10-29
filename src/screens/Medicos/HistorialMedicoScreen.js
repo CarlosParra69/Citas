@@ -30,7 +30,6 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [pacienteInfo, setPacienteInfo] = useState(null);
   const [filterEspecialidad, setFilterEspecialidad] = useState("todos");
-  const [filterEstado, setFilterEstado] = useState("todos");
 
   useFocusEffect(
     React.useCallback(() => {
@@ -92,7 +91,7 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
         // El backend devuelve datos bajo la propiedad 'data'
         const historialData = response.data?.data || response.data || {};
         setHistorial(
-          historialData.historial_citas || historialData.citas || []
+          historialData.historial_medico || []
         );
         setPacienteInfo(historialData.paciente);
       } else {
@@ -112,38 +111,24 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
     setRefreshing(false);
   };
 
-  const filteredHistorial = historial.filter((cita) => {
+  const filteredHistorial = historial.filter((historialItem) => {
     const matchesEspecialidad =
       filterEspecialidad === "todos" ||
-      cita.especialidad?.id === parseInt(filterEspecialidad);
+      historialItem.medico?.especialidad?.id === parseInt(filterEspecialidad);
 
-    const matchesEstado =
-      filterEstado === "todos" || cita.estado === filterEstado;
-
-    return matchesEspecialidad && matchesEstado;
+    // No hay estado en HistorialMedico, así que solo filtrar por especialidad
+    return matchesEspecialidad;
   });
 
   // Ordenar por fecha descendente (más reciente primero)
   const sortedHistorial = filteredHistorial.sort(
-    (a, b) => new Date(b.fecha_hora) - new Date(a.fecha_hora)
+    (a, b) => new Date(b.fecha_consulta) - new Date(a.fecha_consulta)
   );
 
-  const getEstadoColor = (estado) => {
-    switch (estado?.toLowerCase()) {
-      case "completada":
-        return colors.success;
-      case "cancelada":
-        return colors.error;
-      case "no_asistio":
-        return colors.warning;
-      default:
-        return colors.gray;
-    }
-  };
 
   const getUniqueEspecialidades = () => {
     const especialidades = historial
-      .map((cita) => cita.especialidad)
+      .map((historialItem) => historialItem.medico?.especialidad)
       .filter(
         (especialidad, index, self) =>
           especialidad &&
@@ -156,38 +141,29 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
     <TouchableOpacity
       style={styles.citaCard}
       onPress={() =>
-        navigation.navigate("DetalleCitaScreen", { citaId: item.id })
+        navigation.navigate("DetalleCitaScreen", { historialId: item.id })
       }
     >
       <View style={styles.citaHeader}>
         <View style={styles.citaInfo}>
-          <Text style={styles.fechaText}>{formatDate(item.fecha_hora)}</Text>
+          <Text style={styles.fechaText}>{formatDate(item.fecha_consulta)}</Text>
           <Text style={styles.medicoText}>
             Dr. {item.medico?.nombre} {item.medico?.apellido}
           </Text>
-        </View>
-
-        <View
-          style={[
-            styles.estadoBadge,
-            { backgroundColor: getEstadoColor(item.estado) },
-          ]}
-        >
-          <Text style={styles.estadoText}>{item.estado}</Text>
         </View>
       </View>
 
       <View style={styles.citaContent}>
         <Text style={styles.especialidadText}>
-          {item.especialidad?.nombre || "Especialidad no especificada"}
+          {item.medico?.especialidad?.nombre || "Especialidad no especificada"}
         </Text>
         <Text style={styles.motivoText}>
           {item.motivo_consulta || "Motivo no especificado"}
         </Text>
 
-        {item.observaciones && (
+        {item.sintomas && (
           <Text style={styles.observacionesText} numberOfLines={2}>
-            {item.observaciones}
+            Síntomas: {item.sintomas}
           </Text>
         )}
 
@@ -207,6 +183,12 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
               {item.tratamiento}
             </Text>
           </View>
+        )}
+
+        {item.recomendaciones && (
+          <Text style={styles.observacionesText} numberOfLines={2}>
+            Recomendaciones: {item.recomendaciones}
+          </Text>
         )}
       </View>
     </TouchableOpacity>
@@ -276,36 +258,7 @@ const HistorialMedicoScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Estado:</Text>
-          <View style={styles.filterOptions}>
-            {["todos", "completada", "cancelada", "no_asistio"].map(
-              (estado) => (
-                <TouchableOpacity
-                  key={estado}
-                  style={[
-                    styles.filterOption,
-                    filterEstado === estado && styles.activeFilterOption,
-                  ]}
-                  onPress={() => setFilterEstado(estado)}
-                >
-                  <Text
-                    style={[
-                      styles.filterOptionText,
-                      filterEstado === estado && styles.activeFilterOptionText,
-                    ]}
-                  >
-                    {estado === "todos"
-                      ? "Todos"
-                      : estado
-                      ? estado.charAt(0).toUpperCase() + estado.slice(1)
-                      : "Sin estado"}
-                  </Text>
-                </TouchableOpacity>
-              )
-            )}
-          </View>
-        </View>
+        {/* Remover filtro de estado ya que no existe en HistorialMedico */}
       </View>
     );
   };

@@ -1,20 +1,35 @@
 import React, { useState, useEffect } from "react";
 import {
-  StyleSheet,
+  View,
   Text,
-  TouchableOpacity,
-  Alert,
+  StyleSheet,
   ScrollView,
+  Alert,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Ionicons } from "@expo/vector-icons";
 import InputField from "../../components/InputField";
 import GenderSelector from "../../components/GenderSelector";
 import ButtonPrimary from "../../components/ButtonPrimary";
-import useAuth from "../../hooks/useAuth";
+import { registerPaciente } from "../../api/pacientes";
+import { uploadAvatarPublic } from "../../api/avatar";
+import {
+  saveImageToAvatars,
+  compressImage,
+  getRelativePath,
+  deleteAvatarImage,
+  avatarExists,
+} from "../../utils/fileUtils";
 import { useThemeColors } from "../../utils/themeColors";
 
 const RegisterScreen = ({ navigation }) => {
   const colors = useThemeColors();
-  const styles = React.useMemo(() => createStyles(colors), [colors]);
+  const styles = createStyles(colors);
+
   const [formData, setFormData] = useState({
     nombre: "",
     apellido: "",
@@ -25,59 +40,163 @@ const RegisterScreen = ({ navigation }) => {
     email: "",
     direccion: "",
     eps: "",
+    alergias: "",
+    medicamentos_actuales: "",
+    antecedentes_medicos: "",
+    contacto_emergencia: "",
+    telefono_emergencia: "",
+    activo: true,
+    password: "",
+    password_confirmation: "",
   });
 
   const [errors, setErrors] = useState({});
-  const { register, loading, error, clearError } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  useEffect(() => {
-    if (error) {
-      Alert.alert("Error", error);
-      clearError();
+  const pickImage = async () => {
+    Alert.alert("Seleccionar imagen", "Elige una opción", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Galería",
+        onPress: pickImageFromGallery,
+      },
+      {
+        text: "Cámara",
+        onPress: pickImageFromCamera,
+      },
+    ]);
+  };
+
+  const pickImageFromGallery = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error picking image from gallery:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
     }
-  }, [error]);
+  };
+
+  const pickImageFromCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permisos requeridos",
+          "Necesitamos acceso a la cámara para tomar fotos"
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "No se pudo tomar la foto");
+    }
+  };
+
+  const processAndUploadImage = async (imageUri) => {
+    try {
+      setUploadingImage(true);
+
+      // Comprimir la imagen
+      const compressedUri = await compressImage(imageUri);
+
+      // Guardar en la carpeta avatars local
+      const localAvatarPath = await saveImageToAvatars(
+        compressedUri,
+        `temp_${Date.now()}`
+      );
+
+      return localAvatarPath;
+    } catch (error) {
+      console.error("Error procesando imagen:", error);
+      Alert.alert("Error", "No se pudo procesar la imagen");
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    // Limpiar error del campo cuando el usuario empiece a escribir
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: null,
+      }));
+    }
+  };
 
   const validateForm = () => {
     const newErrors = {};
 
-    // Validar nombre
     if (!formData.nombre.trim()) {
       newErrors.nombre = "El nombre es requerido";
-    } else if (formData.nombre.trim().length < 2) {
-      newErrors.nombre = "El nombre debe tener al menos 2 caracteres";
     }
 
-    // Validar apellido
     if (!formData.apellido.trim()) {
       newErrors.apellido = "El apellido es requerido";
-    } else if (formData.apellido.trim().length < 2) {
-      newErrors.apellido = "El apellido debe tener al menos 2 caracteres";
     }
 
-    // Validar cédula
     if (!formData.cedula.trim()) {
       newErrors.cedula = "La cédula es requerida";
-    } else if (formData.cedula.trim().length < 6) {
-      newErrors.cedula = "La cédula debe tener al menos 6 caracteres";
+    } else if (!/^\d+$/.test(formData.cedula)) {
+      newErrors.cedula = "La cédula debe contener solo números";
     }
 
-    // Validar fecha de nacimiento
-    if (!formData.fecha_nacimiento.trim()) {
-      newErrors.fecha_nacimiento = "La fecha de nacimiento es requerida";
-    }
-
-    // Validar teléfono
-    if (!formData.telefono.trim()) {
-      newErrors.telefono = "El teléfono es requerido";
-    } else if (formData.telefono.trim().length < 7) {
-      newErrors.telefono = "El teléfono debe tener al menos 7 dígitos";
-    }
-
-    // Validar email
     if (!formData.email.trim()) {
-      newErrors.email = "El correo electrónico es requerido";
+      newErrors.email = "El email es requerido";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Ingrese un correo electrónico válido";
+      newErrors.email = "El email no es válido";
+    }
+
+    if (formData.telefono && !/^\d+$/.test(formData.telefono)) {
+      newErrors.telefono = "El teléfono debe contener solo números";
+    }
+
+    if (
+      formData.fecha_nacimiento &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(formData.fecha_nacimiento)
+    ) {
+      newErrors.fecha_nacimiento = "La fecha debe tener el formato YYYY-MM-DD";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "La contraseña es requerida";
+    } else if (formData.password.length < 6) {
+      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+    }
+
+    if (!formData.password_confirmation) {
+      newErrors.password_confirmation =
+        "La confirmación de contraseña es requerida";
+    } else if (formData.password !== formData.password_confirmation) {
+      newErrors.password_confirmation = "Las contraseñas no coinciden";
     }
 
     setErrors(newErrors);
@@ -85,132 +204,340 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   const handleRegister = async () => {
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      Alert.alert("Error", "Por favor corrige los errores en el formulario");
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      await register({
-        nombre: formData.nombre.trim(),
-        apellido: formData.apellido.trim(),
-        cedula: formData.cedula.trim(),
-        fecha_nacimiento: formData.fecha_nacimiento,
-        genero: formData.genero,
-        telefono: formData.telefono.trim(),
-        email: formData.email.trim(),
-        direccion: formData.direccion.trim(),
-        eps: formData.eps.trim(),
-      });
+      const dataToSend = { ...formData };
+      const response = await registerPaciente(dataToSend);
 
-      Alert.alert(
-        "Registro Exitoso",
-        "Tu cuenta ha sido creada correctamente y has iniciado sesión automáticamente.",
-        [
-          {
-            text: "OK",
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("Error al registrarse:", error);
+      if (response.data.success) {
+        // Buscar el ID del usuario en diferentes estructuras posibles
+        let userId = null;
+        if (response.data?.user?.id) {
+          userId = response.data.user.id;
+        } else if (response.data?.data?.user?.id) {
+          userId = response.data.data.user.id;
+        }
+
+        // Si hay imagen de perfil, subirla después de crear el paciente
+        if (profileImage && userId) {
+          try {
+            const localAvatarPath = await processAndUploadImage(profileImage);
+
+            if (localAvatarPath) {
+              const fileExists = await avatarExists(localAvatarPath);
+
+              if (fileExists) {
+                const formData = new FormData();
+                formData.append("avatar", {
+                  uri: localAvatarPath,
+                  type: "image/jpeg",
+                  name: `avatar_${userId}_${Date.now()}.jpg`,
+                });
+                formData.append("user_id", userId);
+
+                const uploadResult = await uploadAvatarPublic(formData);
+
+                if (uploadResult.success) {
+                  Alert.alert(
+                    "Registro Exitoso",
+                    "Tu cuenta ha sido creada correctamente con foto de perfil y has iniciado sesión automáticamente.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => navigation.navigate("Login"),
+                      },
+                    ]
+                  );
+                } else {
+                  Alert.alert(
+                    "Registro Exitoso",
+                    "Tu cuenta ha sido creada correctamente, pero no se pudo subir la foto de perfil. Has iniciado sesión automáticamente.",
+                    [
+                      {
+                        text: "OK",
+                        onPress: () => navigation.navigate("Login"),
+                      },
+                    ]
+                  );
+                }
+              }
+            }
+          } catch (imageError) {
+            console.error("Error procesando imagen:", imageError);
+            Alert.alert(
+              "Registro Exitoso",
+              "Tu cuenta ha sido creada correctamente, pero ocurrió un error con la imagen de perfil. Has iniciado sesión automáticamente.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => navigation.navigate("Login"),
+                },
+              ]
+            );
+          }
+        } else {
+          Alert.alert(
+            "Registro Exitoso",
+            "Tu cuenta ha sido creada correctamente. Se han enviado las credenciales de acceso por email. Has iniciado sesión automáticamente.",
+            [
+              {
+                text: "OK",
+                onPress: () => navigation.navigate("Login"),
+              },
+            ]
+          );
+        }
+      } else {
+        throw new Error(response.data.message || "Error al crear paciente");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.message || err.message || "Error de conexión";
+      Alert.alert("Error", errorMessage);
+      console.error("Error creating paciente:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleChange = (fieldName, value) => {
-    setFormData((prev) => ({ ...prev, [fieldName]: value }));
-    // Limpiar error del campo cuando el usuario empiece a escribir
-    if (errors[fieldName]) {
-      setErrors((prev) => ({ ...prev, [fieldName]: "" }));
-    }
-  };
 
   return (
-    <ScrollView
+    <KeyboardAvoidingView
       style={styles.container}
-      contentContainerStyle={styles.contentContainer}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
     >
-      <Text style={styles.hospitalTitle}>Sistema EPS</Text>
-      <Text style={styles.subtitle}>Crear Nueva Cuenta</Text>
-
-      <InputField
-        placeholder="Nombre"
-        value={formData.nombre}
-        onChangeText={(value) => handleChange("nombre", value)}
-        error={errors.nombre}
-      />
-
-      <InputField
-        placeholder="Apellido"
-        value={formData.apellido}
-        onChangeText={(value) => handleChange("apellido", value)}
-        error={errors.apellido}
-      />
-
-      <InputField
-        placeholder="Cédula"
-        value={formData.cedula}
-        onChangeText={(value) => handleChange("cedula", value)}
-        keyboardType="numeric"
-        error={errors.cedula}
-      />
-
-      <InputField
-        placeholder="Fecha de nacimiento (YYYY-MM-DD)"
-        value={formData.fecha_nacimiento}
-        onChangeText={(value) => handleChange("fecha_nacimiento", value)}
-        error={errors.fecha_nacimiento}
-      />
-
-      <GenderSelector
-        value={formData.genero}
-        onValueChange={(value) => handleChange("genero", value)}
-        error={errors.genero}
-      />
-
-      <InputField
-        placeholder="Teléfono"
-        value={formData.telefono}
-        onChangeText={(value) => handleChange("telefono", value)}
-        keyboardType="phone-pad"
-        error={errors.telefono}
-      />
-
-      <InputField
-        placeholder="Correo electrónico"
-        value={formData.email}
-        onChangeText={(value) => handleChange("email", value)}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        error={errors.email}
-      />
-
-      <InputField
-        placeholder="Dirección (opcional)"
-        value={formData.direccion}
-        onChangeText={(value) => handleChange("direccion", value)}
-        error={errors.direccion}
-      />
-
-      <InputField
-        placeholder="EPS (opcional)"
-        value={formData.eps}
-        onChangeText={(value) => handleChange("eps", value)}
-        error={errors.eps}
-      />
-
-      <ButtonPrimary
-        title="Registrarse"
-        onPress={handleRegister}
-        disabled={loading}
-      />
-
-      <TouchableOpacity
-        style={styles.loginLink}
-        onPress={() => navigation.navigate("Login")}
+      <ScrollView
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.loginText}>
-          ¿Ya tienes cuenta? Inicia sesión aquí
-        </Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <Text style={styles.title}>MediApp</Text>
+        <Text style={styles.subtitle}>Crear Nueva Cuenta</Text>
+
+        {/* Foto de Perfil */}
+        <View style={styles.profileImageSection}>
+          <Text style={styles.sectionTitle}>Foto de Perfil</Text>
+          <TouchableOpacity
+            onPress={pickImage}
+            style={styles.avatarContainer}
+            disabled={uploadingImage}
+          >
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.info }]}>
+                <Ionicons name="person" size={32} color={colors.white} />
+              </View>
+            )}
+            <View
+              style={[styles.cameraIcon, { backgroundColor: colors.primary }]}
+            >
+              <Ionicons name="camera" size={12} color={colors.white} />
+            </View>
+          </TouchableOpacity>
+          <Text style={[styles.profileImageHint, { color: colors.gray }]}>
+            Toca para {profileImage ? "cambiar" : "agregar"} foto de perfil
+          </Text>
+          {uploadingImage && (
+            <Text style={[styles.uploadingText, { color: colors.primary }]}>
+              Procesando imagen...
+            </Text>
+          )}
+        </View>
+
+        {/* Información básica */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Información Personal</Text>
+
+          <InputField
+            label="Nombre *"
+            value={formData.nombre}
+            onChangeText={(value) => handleInputChange("nombre", value)}
+            error={errors.nombre}
+            placeholder="Ingresa el nombre"
+          />
+
+          <InputField
+            label="Apellido *"
+            value={formData.apellido}
+            onChangeText={(value) => handleInputChange("apellido", value)}
+            error={errors.apellido}
+            placeholder="Ingresa el apellido"
+          />
+
+          <InputField
+            label="Cédula *"
+            value={formData.cedula}
+            onChangeText={(value) => handleInputChange("cedula", value)}
+            error={errors.cedula}
+            placeholder="Ingresa la cédula"
+            keyboardType="numeric"
+          />
+
+          <InputField
+            label="Email *"
+            value={formData.email}
+            onChangeText={(value) => handleInputChange("email", value)}
+            error={errors.email}
+            placeholder="ejemplo@email.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+
+          <InputField
+            label="Teléfono"
+            value={formData.telefono}
+            onChangeText={(value) => handleInputChange("telefono", value)}
+            error={errors.telefono}
+            placeholder="Ingresa el teléfono"
+            keyboardType="phone-pad"
+          />
+
+          <InputField
+            label="Fecha de Nacimiento"
+            value={formData.fecha_nacimiento}
+            onChangeText={(value) =>
+              handleInputChange("fecha_nacimiento", value)
+            }
+            error={errors.fecha_nacimiento}
+            placeholder="YYYY-MM-DD"
+          />
+
+          <GenderSelector
+            label="Género"
+            value={formData.genero}
+            onValueChange={(value) => handleInputChange("genero", value)}
+          />
+
+          <InputField
+            label="Dirección"
+            value={formData.direccion}
+            onChangeText={(value) => handleInputChange("direccion", value)}
+            placeholder="Ingresa la dirección"
+            multiline
+            numberOfLines={2}
+          />
+        </View>
+
+        {/* Credenciales de acceso */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Credenciales de Acceso</Text>
+
+          <InputField
+            label="Contraseña *"
+            value={formData.password}
+            onChangeText={(value) => handleInputChange("password", value)}
+            error={errors.password}
+            placeholder="Ingresa una contraseña"
+            secureTextEntry
+          />
+
+          <InputField
+            label="Confirmar Contraseña *"
+            value={formData.password_confirmation}
+            onChangeText={(value) =>
+              handleInputChange("password_confirmation", value)
+            }
+            error={errors.password_confirmation}
+            placeholder="Confirma la contraseña"
+            secureTextEntry
+          />
+        </View>
+
+        {/* Información médica */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Información Médica</Text>
+
+          <InputField
+            label="EPS"
+            value={formData.eps}
+            onChangeText={(value) => handleInputChange("eps", value)}
+            placeholder="Nombre de la EPS"
+          />
+
+          <InputField
+            label="Alergias"
+            value={formData.alergias}
+            onChangeText={(value) => handleInputChange("alergias", value)}
+            placeholder="Describe las alergias conocidas"
+            multiline
+            numberOfLines={3}
+          />
+
+          <InputField
+            label="Medicamentos Actuales"
+            value={formData.medicamentos_actuales}
+            onChangeText={(value) =>
+              handleInputChange("medicamentos_actuales", value)
+            }
+            placeholder="Medicamentos que toma actualmente"
+            multiline
+            numberOfLines={3}
+          />
+
+          <InputField
+            label="Antecedentes Médicos"
+            value={formData.antecedentes_medicos}
+            onChangeText={(value) =>
+              handleInputChange("antecedentes_medicos", value)
+            }
+            placeholder="Antecedentes médicos relevantes"
+            multiline
+            numberOfLines={3}
+          />
+        </View>
+
+        {/* Contacto de emergencia */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Contacto de Emergencia</Text>
+
+          <InputField
+            label="Nombre del Contacto"
+            value={formData.contacto_emergencia}
+            onChangeText={(value) =>
+              handleInputChange("contacto_emergencia", value)
+            }
+            placeholder="Nombre del contacto de emergencia"
+          />
+
+          <InputField
+            label="Teléfono del Contacto"
+            value={formData.telefono_emergencia}
+            onChangeText={(value) =>
+              handleInputChange("telefono_emergencia", value)
+            }
+            placeholder="Teléfono del contacto de emergencia"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        <ButtonPrimary
+          title="Registrarse"
+          onPress={handleRegister}
+          loading={loading}
+          style={styles.submitButton}
+        />
+
+        <TouchableOpacity
+          style={styles.loginLink}
+          onPress={() => navigation.navigate("Login")}
+        >
+          <Text style={styles.loginText}>
+            ¿Ya tienes cuenta? Inicia sesión aquí
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -220,12 +547,11 @@ const createStyles = (colors) =>
       flex: 1,
       backgroundColor: colors.background,
     },
-    contentContainer: {
-      padding: 20,
-      justifyContent: "center",
-      minHeight: "100%",
+    content: {
+      flex: 1,
+      padding: 16,
     },
-    hospitalTitle: {
+    title: {
       fontSize: 32,
       fontWeight: "bold",
       color: colors.text,
@@ -237,7 +563,92 @@ const createStyles = (colors) =>
       fontSize: 18,
       color: colors.text,
       textAlign: "center",
+      marginBottom: 24,
+    },
+    section: {
+      marginBottom: 24,
+      backgroundColor: colors.card || colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 16,
+    },
+    submitButton: {
+      marginTop: 8,
       marginBottom: 32,
+    },
+    profileImageSection: {
+      backgroundColor: colors.card || colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 16,
+      shadowColor: colors.shadow || colors.black,
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.15,
+      shadowRadius: 6,
+      elevation: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    avatarContainer: {
+      position: "relative",
+      marginBottom: 12,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      justifyContent: "center",
+      alignItems: "center",
+      marginBottom: 8,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    avatarImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    cameraIcon: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 2,
+      borderColor: colors.border,
+    },
+    profileImageHint: {
+      fontSize: 14,
+      textAlign: "center",
+    },
+    uploadingText: {
+      fontSize: 12,
+      marginTop: 4,
+      fontStyle: "italic",
     },
     loginLink: {
       marginTop: 20,

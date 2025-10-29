@@ -4,25 +4,24 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Alert,
   TouchableOpacity,
+  Alert,
   TextInput,
   Switch,
 } from "react-native";
 import { useAuthContext } from "../../context/AuthContext";
-import { updateUser } from "../../api/auth";
+import { getUsuarioById, updateUsuario } from "../../api/usuarios";
 import { getMedicoById, updateMedico } from "../../api/medicos";
 import { getPacienteById, updatePaciente } from "../../api/pacientes";
-import ButtonPrimary from "../../components/ButtonPrimary";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
 
-const EditProfileScreen = ({ navigation, route }) => {
-  const { user, updateUser: updateUserContext } = useAuthContext();
+const EditUsuarioScreen = ({ navigation, route }) => {
   const colors = useThemeColors();
+  const { user } = useAuthContext();
+  const { usuarioId } = route.params;
   const styles = createStyles(colors);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -35,65 +34,84 @@ const EditProfileScreen = ({ navigation, route }) => {
     medico_id: null,
     paciente_id: null,
   });
-
-  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      loadUserProfile();
+    if (user?.rol === "superadmin") {
+      loadUsuario();
+    } else {
+      Alert.alert(
+        "Acceso Denegado",
+        "No tienes permisos para editar usuarios",
+        [
+          {
+            text: "OK",
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
     }
-  }, [user]);
+  }, [user, usuarioId]);
 
   useEffect(() => {
     console.log("FormData updated:", formData);
   }, [formData]);
 
-  const loadUserProfile = async () => {
+  const loadUsuario = async () => {
     try {
       setLoading(true);
-      console.log("User data:", user);
-      console.log("Loading telefono, paciente_id:", user.paciente_id, "medico_id:", user.medico_id);
+      const response = await getUsuarioById(usuarioId);
+      if (response.success) {
+        const userData = response.data;
+        console.log("User data:", userData);
+        console.log("Loading telefono, paciente_id:", userData.paciente_id, "medico_id:", userData.medico_id);
 
-      let telefono = "";
+        let telefono = "";
 
-      // Cargar teléfono de la tabla específica
-      if (user.paciente_id) {
-        const pacienteResponse = await getPacienteById(user.paciente_id);
-        console.log("Paciente response:", pacienteResponse);
-        console.log("Paciente response success:", pacienteResponse.data.success);
-        if (pacienteResponse.data.success) {
-          telefono = pacienteResponse.data.data.telefono || "";
-          console.log("Telefono from paciente:", telefono);
+        // Cargar teléfono de la tabla específica
+        if (userData.paciente_id) {
+          const pacienteResponse = await getPacienteById(userData.paciente_id);
+          console.log("Paciente response:", pacienteResponse);
+          console.log("Paciente response success:", pacienteResponse.data.success);
+          if (pacienteResponse.data.success) {
+            telefono = pacienteResponse.data.data.telefono || "";
+            console.log("Telefono from paciente:", telefono);
+          }
         }
-      }
 
-      if (user.medico_id) {
-        const medicoResponse = await getMedicoById(user.medico_id);
-        console.log("Medico response:", medicoResponse);
-        console.log("Medico response success:", medicoResponse.success);
-        if (medicoResponse.success) {
-          telefono = medicoResponse.data.telefono || "";
-          console.log("Telefono from medico:", telefono);
+        if (userData.medico_id) {
+          const medicoResponse = await getMedicoById(userData.medico_id);
+          console.log("Medico response:", medicoResponse);
+          console.log("Medico response success:", medicoResponse.success);
+          if (medicoResponse.success) {
+            telefono = medicoResponse.data.telefono || "";
+            console.log("Telefono from medico:", telefono);
+          }
         }
-      }
 
-      console.log("Setting formData telefono:", telefono);
-      const newFormData = {
-        nombre: user.nombre || "",
-        apellido: user.apellido || "",
-        email: user.email || "",
-        cedula: user.cedula || "",
-        telefono: telefono,
-        rol: user.rol || "",
-        activo: user.activo || 1,
-        medico_id: user.medico_id || null,
-        paciente_id: user.paciente_id || null,
-      };
-      console.log("New formData:", newFormData);
-      setFormData(newFormData);
+        console.log("Setting formData telefono:", telefono);
+        const newFormData = {
+          nombre: userData.nombre || "",
+          apellido: userData.apellido || "",
+          email: userData.email || "",
+          cedula: userData.cedula || "",
+          telefono: telefono,
+          rol: userData.rol || "",
+          activo: userData.activo || 1,
+          medico_id: userData.medico_id || null,
+          paciente_id: userData.paciente_id || null,
+        };
+        console.log("New formData:", newFormData);
+        setFormData(newFormData);
+      } else {
+        Alert.alert("Error", "No se pudo cargar el usuario");
+        navigation.goBack();
+      }
     } catch (error) {
-      console.error("Error loading user profile:", error);
-      Alert.alert("Error", "No se pudo cargar el perfil");
+      console.error("Error loading usuario:", error);
+      Alert.alert("Error", "No se pudo cargar el usuario");
+      navigation.goBack();
     } finally {
       setLoading(false);
     }
@@ -107,13 +125,6 @@ const EditProfileScreen = ({ navigation, route }) => {
       ...prev,
       [field]: value,
     }));
-  };
-
-  const handleChange = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
   };
 
   const handleSave = async () => {
@@ -130,14 +141,7 @@ const EditProfileScreen = ({ navigation, route }) => {
 
     try {
       setSaving(true);
-      const response = await updateUser({
-        nombre: formData.nombre.trim(),
-        apellido: formData.apellido.trim(),
-        cedula: formData.cedula.trim(),
-        telefono: formData.telefono.trim(),
-        email: formData.email.trim(),
-      });
-
+      const response = await updateUsuario(usuarioId, formData);
       if (response.success) {
         // Actualizar teléfono en médico o paciente
         if (formData.rol === "medico" && formData.medico_id) {
@@ -154,35 +158,30 @@ const EditProfileScreen = ({ navigation, route }) => {
           }
         }
 
-        // Actualizar el contexto del usuario
-        await updateUserContext();
-        Alert.alert("Éxito", "Perfil actualizado correctamente", [
+        Alert.alert("Éxito", "Usuario actualizado correctamente", [
           {
             text: "OK",
             onPress: () => navigation.goBack(),
           },
         ]);
       } else {
-        Alert.alert(
-          "Error",
-          response.message || "No se pudo actualizar el perfil"
-        );
+        Alert.alert("Error", "No se pudo actualizar el usuario");
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
-      Alert.alert("Error", "No se pudo actualizar el perfil");
+      console.error("Error updating usuario:", error);
+      Alert.alert("Error", "No se pudo actualizar el usuario");
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <LoadingSpinner message="Cargando datos del perfil..." />;
+    return <LoadingSpinner message="Cargando usuario..." />;
   }
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.title}>Editar Perfil</Text>
+      <Text style={styles.title}>Editar Usuario</Text>
 
       <View style={styles.formContainer}>
         <View style={styles.inputGroup}>
@@ -249,6 +248,16 @@ const EditProfileScreen = ({ navigation, route }) => {
             onChangeText={(value) => handleInputChange("rol", value)}
             placeholder="Ingresa el rol"
           />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.switchContainer}>
+            <Text style={styles.label}>Activo</Text>
+            <Switch
+              value={formData.activo === 1}
+              onValueChange={(value) => handleInputChange("activo", value ? 1 : 0)}
+            />
+          </View>
         </View>
       </View>
 
@@ -318,4 +327,4 @@ const createStyles = (colors) =>
     },
   });
 
-export default EditProfileScreen;
+export default EditUsuarioScreen;

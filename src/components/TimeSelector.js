@@ -7,10 +7,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import {
-  DateTimePickerAndroid,
-  DateTimePickerIOS,
-} from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useThemeColors } from "../utils/themeColors";
 import { formatDateTimeForAPI } from "../utils/formatDate";
 
@@ -73,14 +70,73 @@ const TimeSelector = ({
     if (Platform.OS === "ios") {
       setShowTimePicker(true);
     } else {
-      DateTimePickerAndroid.open({
+      // Para Android usar DateTimePicker nativo
+      DateTimePicker.open({
         value: selectedDateTime || new Date(),
         onChange: handleTimeSelect,
         mode: "time",
         is24Hour: false,
-        display: "clock", // Mostrar como reloj en Android
+        display: "clock",
       });
     }
+  };
+
+  // Generar opciones de hora cada 30 minutos para iOS
+  const generateTimeOptions = () => {
+    const options = [];
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const hourStr = hour.toString().padStart(2, '0');
+        const minuteStr = minute.toString().padStart(2, '0');
+        const timeString = `${hourStr}:${minuteStr}`;
+        
+        // Formatear manualmente para evitar problemas de redondeo
+        let displayTime;
+        if (hour === 0) {
+          displayTime = `12:${minuteStr} AM`;
+        } else if (hour < 12) {
+          displayTime = `${hourStr}:${minuteStr} AM`;
+        } else if (hour === 12) {
+          displayTime = `12:${minuteStr} PM`;
+        } else {
+          displayTime = `${(hour - 12).toString().padStart(2, '0')}:${minuteStr} PM`;
+        }
+        
+        options.push({
+          value: timeString,
+          label: displayTime
+        });
+      }
+    }
+    return options;
+  };
+
+  const timeOptions = generateTimeOptions();
+
+  const handleTimeSelectiOS = (selectedTimeString) => {
+    // Crear nueva fecha con la hora seleccionada
+    const newDateTime = new Date();
+    const [hours, minutes] = selectedTimeString.split(':');
+    newDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    // Si es una fecha futura, mantener esa fecha, sino usar hoy
+    if (selectedDateTime && selectedDateTime > new Date()) {
+      newDateTime.setFullYear(
+        selectedDateTime.getFullYear(),
+        selectedDateTime.getMonth(),
+        selectedDateTime.getDate()
+      );
+    }
+
+    onDateTimeSelect(newDateTime);
+
+    if (onAvailabilityCheck) {
+      // Usar la función de utilidad para formatear la fecha correctamente
+      const isoString = formatDateTimeForAPI(newDateTime);
+      onAvailabilityCheck(isoString);
+    }
+
+    setShowTimePicker(false);
   };
 
   const getTimeStatusColor = () => {
@@ -123,14 +179,28 @@ const TimeSelector = ({
       )}
 
       {showTimePicker && Platform.OS === "ios" && (
-        <DateTimePickerIOS
-          value={selectedDateTime || new Date()}
-          mode="time"
-          is24Hour={false}
-          onChange={handleTimeSelect}
-          textColor={colors.primary}
-          accentColor={colors.primary}
-        />
+        <View style={componentStyles.pickerOverlay}>
+          <View style={componentStyles.pickerContainer}>
+            <Text style={componentStyles.pickerTitle}>Seleccionar Hora</Text>
+            <ScrollView style={componentStyles.timeOptionsList}>
+              {timeOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={componentStyles.timeOption}
+                  onPress={() => handleTimeSelectiOS(option.value)}
+                >
+                  <Text style={componentStyles.timeOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={componentStyles.cancelButton}
+              onPress={() => setShowTimePicker(false)}
+            >
+              <Text style={componentStyles.cancelButtonText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
     </View>
   );
@@ -394,6 +464,56 @@ const createTimeSelectorStyles = (colors) =>
       fontSize: 14,
       fontWeight: "600",
       textAlign: "center",
+    },
+    pickerOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    pickerContainer: {
+      backgroundColor: colors.background || colors.white,
+      borderRadius: 12,
+      padding: 20,
+      width: '90%',
+    },
+    cancelButton: {
+      backgroundColor: colors.primary,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    cancelButtonText: {
+      color: colors.white,
+      textAlign: 'center',
+      fontWeight: '600',
+      fontSize: 16,
+    },
+    pickerTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: colors.text,
+      textAlign: 'center',
+      marginBottom: 16,
+    },
+    timeOptionsList: {
+      maxHeight: 300,
+      marginVertical: 10,
+    },
+    timeOption: {
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border || colors.lightGray,
+    },
+    timeOptionText: {
+      fontSize: 16,
+      color: colors.text,
+      textAlign: 'center',
     },
   });
 

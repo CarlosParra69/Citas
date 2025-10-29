@@ -115,6 +115,34 @@ export const getAvatarByUserId = async (userId) => {
 };
 
 /**
+ * Subir avatar público (sin autenticación)
+ * @param {FormData} formData - FormData con la imagen y user_id
+ * @returns {Promise} - Respuesta del servidor
+ */
+export const uploadAvatarPublic = async (avatarData) => {
+  try {
+    const response = await axiosInstance.post("/avatar/upload-public", avatarData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+        // No incluir Authorization header para rutas públicas
+      },
+    });
+    return {
+      success: response.data.success,
+      message: response.data.message,
+      data: response.data.data,
+    };
+  } catch (error) {
+    console.error("Error subiendo avatar público:", error);
+    return {
+      success: false,
+      message: error.response?.data?.message || "Error al subir el avatar",
+      error: error.response?.data || error.message,
+    };
+  }
+};
+
+/**
  * Obtener imagen de avatar directamente por filename
  * @param {string} filename - Nombre del archivo de imagen
  * @returns {Promise} - URL de la imagen o null si hay error
