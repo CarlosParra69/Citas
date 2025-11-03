@@ -198,9 +198,9 @@ const CrearCitaScreen = ({ navigation }) => {
       if (user?.rol === "medico" || user?.rol === "superadmin") {
         const pacientesResponse = await getPacientes();
          
-        if (pacientesResponse.data?.success) {
+        if (pacientesResponse.success) {
           // Manejar la estructura de respuesta de Laravel paginada
-          const pacientesData = pacientesResponse.data?.data?.data || pacientesResponse.data?.data || [];
+          const pacientesData = pacientesResponse.data?.data || pacientesResponse.data || [];
           setPacientes(pacientesData);
         }
       }
