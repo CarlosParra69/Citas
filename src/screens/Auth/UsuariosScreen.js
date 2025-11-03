@@ -45,11 +45,6 @@ const UsuariosScreen = ({ navigation }) => {
       onPress: () => navigation.navigate("GestionPacientesScreen"),
     },
     {
-      title: "Crear Superadmin",
-      subtitle: "Registrar nuevo Administrador en el sistema",
-      onPress: () => navigation.navigate("CrearUsuarioScreen"),
-    },
-    {
       title: "Crear Médico",
       subtitle: "Registrar nuevo médico",
       onPress: () => navigation.navigate("CrearMedicoScreen"),
@@ -228,79 +223,89 @@ const UsuariosScreen = ({ navigation }) => {
     return activo ? colors.success : colors.error;
   };
 
-  const renderUsuarioItem = ({ item }) => (
-    <View style={styles.usuarioCard}>
-      <View style={styles.usuarioHeader}>
-        <View style={styles.usuarioInfo}>
-          <Text style={styles.usuarioName}>
-            {item.nombre} {item.apellido}
-          </Text>
-          <Text style={styles.usuarioEmail}>{item.email}</Text>
-          {item.cedula && (
-            <Text style={styles.usuarioCedula}>Cédula: {item.cedula}</Text>
-          )}
-        </View>
+  const renderUsuarioItem = ({ item }) => {
+    // Verificar si el usuario actual es el mismo superadministrador logueado
+    const isCurrentUser = user?.id === item.id && user?.rol === "superadmin";
 
-        <View style={styles.badgesContainer}>
-          <View
-            style={[
-              styles.roleBadge,
-              { backgroundColor: getRoleColor(item.rol) },
-            ]}
-          >
-            <Text style={styles.roleBadgeText}>
-              {item.rol
-                ? item.rol.charAt(0).toUpperCase() + item.rol.slice(1)
-                : "Sin rol"}
+    return (
+      <View style={styles.usuarioCard}>
+        <View style={styles.usuarioHeader}>
+          <View style={styles.usuarioInfo}>
+            <Text style={styles.usuarioName}>
+              {item.nombre} {item.apellido}
+              {isCurrentUser && (
+                <Text style={styles.currentUserText}> (Tú)</Text>
+              )}
             </Text>
+            <Text style={styles.usuarioEmail}>{item.email}</Text>
+            {item.cedula && (
+              <Text style={styles.usuarioCedula}>Cédula: {item.cedula}</Text>
+            )}
           </View>
 
-          <View
-            style={[
-              styles.estadoBadge,
-              { backgroundColor: getEstadoColor(item.activo) },
-            ]}
-          >
-            <Text style={styles.estadoBadgeText}>
-              {item.activo ? "Activo" : "Inactivo"}
-            </Text>
+          <View style={styles.badgesContainer}>
+            <View
+              style={[
+                styles.roleBadge,
+                { backgroundColor: getRoleColor(item.rol) },
+              ]}
+            >
+              <Text style={styles.roleBadgeText}>
+                {item.rol
+                  ? item.rol.charAt(0).toUpperCase() + item.rol.slice(1)
+                  : "Sin rol"}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.estadoBadge,
+                { backgroundColor: getEstadoColor(item.activo) },
+              ]}
+            >
+              <Text style={styles.estadoBadgeText}>
+                {item.activo ? "Activo" : "Inactivo"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.actionsContainer}>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.editButton]}
+              onPress={() => editarUsuario(item.id)}
+            >
+              <Text style={styles.actionButtonText}>Editar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                item.activo
+                  ? styles.deactivateButton
+                  : styles.activateButton,
+              ]}
+              onPress={() => toggleUsuarioEstado(item.id, item.activo)}
+            >
+              <Text style={styles.actionButtonText}>
+                {item.activo ? "Desactivar" : "Activar"}
+              </Text>
+            </TouchableOpacity>
+
+            {!isCurrentUser && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => eliminarUsuario(item.id)}
+              >
+                <Text style={styles.actionButtonText}>Eliminar</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
-
-      <View style={styles.actionsContainer}>
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.editButton]}
-            onPress={() => editarUsuario(item.id)}
-          >
-            <Text style={styles.actionButtonText}>Editar</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.actionButton,
-              item.activo
-                ? styles.deactivateButton
-                : styles.activateButton,
-            ]}
-            onPress={() => toggleUsuarioEstado(item.id, item.activo)}
-          >
-            <Text style={styles.actionButtonText}>
-              {item.activo ? "Desactivar" : "Activar"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteButton]}
-            onPress={() => eliminarUsuario(item.id)}
-          >
-            <Text style={styles.actionButtonText}>Eliminar</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -543,6 +548,11 @@ const createStyles = (colors) =>
       fontWeight: "bold",
       color: colors.text,
       marginBottom: 4,
+    },
+    currentUserText: {
+      fontSize: 14,
+      color: colors.primary,
+      fontWeight: "600",
     },
     usuarioEmail: {
       fontSize: 14,

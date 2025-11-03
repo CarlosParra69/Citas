@@ -41,6 +41,7 @@ const EditUsuarioScreen = ({ navigation, route }) => {
   const roles = [
     { value: "paciente", label: "Paciente", color: "#ff9800" },
     { value: "medico", label: "Médico", color: "#1976d2" },
+    { value: "superadmin", label: "Superadministrador", color: "#d32f2f" },
   ];
 
   useEffect(() => {
@@ -90,9 +91,8 @@ const EditUsuarioScreen = ({ navigation, route }) => {
           cedula: userData.cedula || "",
           telefono: telefono,
           // Determinar rol basado en los IDs, permitir edición
-          rol: userData.medico_id ? "medico" : 
-               userData.paciente_id ? "paciente" : 
-               userData.rol || "paciente",
+          rol: userData.rol || (userData.medico_id ? "medico" :
+               userData.paciente_id ? "paciente" : "paciente"),
           medico_id: userData.medico_id || null,
           paciente_id: userData.paciente_id || null,
         };
@@ -120,7 +120,7 @@ const EditUsuarioScreen = ({ navigation, route }) => {
   };
 
   const handleSave = async () => {
-    if (!formData.nombre || !formData.apellido || !formData.email) {
+    if (!formData.nombre || !formData.apellido || !formData.email || !formData.rol) {
       Alert.alert("Error", "Por favor completa todos los campos obligatorios");
       return;
     }
@@ -141,6 +141,7 @@ const EditUsuarioScreen = ({ navigation, route }) => {
         email: formData.email,
         cedula: formData.cedula,
         telefono: formData.telefono,
+        rol: formData.rol,
       };
 
       // Actualizar usuario
@@ -169,8 +170,8 @@ const EditUsuarioScreen = ({ navigation, route }) => {
   const sincronizarDatos = async () => {
     try {
       // Sincronizar con tabla específica según rol
+      // Los superadministradores no tienen registros en tablas específicas
       if (formData.rol === "medico" && formData.medico_id) {
-        
         await updateMedico(formData.medico_id, {
           nombre: formData.nombre,
           apellido: formData.apellido,
@@ -179,7 +180,6 @@ const EditUsuarioScreen = ({ navigation, route }) => {
           telefono: formData.telefono,
         });
       } else if (formData.rol === "paciente" && formData.paciente_id) {
-        
         await updatePaciente(formData.paciente_id, {
           nombre: formData.nombre,
           apellido: formData.apellido,
@@ -188,6 +188,7 @@ const EditUsuarioScreen = ({ navigation, route }) => {
           telefono: formData.telefono,
         });
       }
+      // Para superadmin no hay sincronización necesaria (no tiene tabla específica)
     } catch (error) {
       console.error("Error en sincronización manual:", error);
       // No mostrar error al usuario, la sincronización principal fue exitosa
