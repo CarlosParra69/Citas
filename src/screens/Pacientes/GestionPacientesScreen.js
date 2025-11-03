@@ -16,6 +16,7 @@ import {
   deletePaciente,
 } from "../../api/pacientes";
 import LoadingSpinner from "../../components/LoadingSpinner";
+import ButtonPrimary from "../../components/ButtonPrimary";
 import { useThemeColors } from "../../utils/themeColors";
 import { useGlobalStyles } from "../../styles/globalStyles";
 
@@ -46,23 +47,45 @@ const GestionPacientesScreen = ({ navigation }) => {
           ]
         );
       }
-    }, [user])
+    }, [user, selectedEstado])
   );
 
   const loadPacientes = async () => {
     try {
       setLoading(true);
-      const response = await getPacientes();
-      if (response.data?.success) {
-        // La API devuelve datos paginados, necesitamos acceder a response.data.data.data
-        const pacientesData = response.data?.data?.data || [];
-        setPacientes(pacientesData);
+      
+      // Cargar todos los pacientes sin filtros del backend para hacer filtrado en frontend
+      const response = await getPacientes({});
+      
+      if (response.success && response.data) {
+        // Manejar tanto array directo como paginación
+        let pacientesData = [];
+        
+        if (Array.isArray(response.data)) {
+          // Si response.data es un array directo
+          pacientesData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Si response.data es un objeto de paginación
+          pacientesData = response.data.data;
+        } else {
+          console.warn("Estructura de datos inesperada:", response.data);
+          pacientesData = [];
+        }
+        
+        // Convertir activo (1/0) a boolean para consistencia
+        const pacientesWithBooleanEstado = pacientesData.map(paciente => ({
+          ...paciente,
+          activo: paciente.activo === 1 || paciente.activo === true
+        }));
+        
+        setPacientes(pacientesWithBooleanEstado);
       } else {
-        Alert.alert("Error", "No se pudieron cargar los pacientes");
+        console.error("Respuesta sin éxito:", response);
+        setPacientes([]);
       }
     } catch (error) {
       console.error("Error loading pacientes:", error);
-      Alert.alert("Error", "No se pudieron cargar los pacientes");
+      Alert.alert("Error", `No se pudieron cargar los pacientes: ${error.message || 'Error desconocido'}`);
     } finally {
       setLoading(false);
     }
@@ -74,9 +97,9 @@ const GestionPacientesScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
-  const handleToggleEstado = async (pacienteId, currentEstado) => {
-    const newEstado = currentEstado === "activo" ? "inactivo" : "activo";
-    const actionText = newEstado === "activo" ? "activar" : "desactivar";
+  const handleToggleEstado = async (pacienteId, currentActivo) => {
+    const newActivo = !currentActivo;
+    const actionText = newActivo ? "activar" : "desactivar";
 
     Alert.alert(
       `¿${actionText.charAt(0).toUpperCase() + actionText.slice(1)} paciente?`,
@@ -88,33 +111,29 @@ const GestionPacientesScreen = ({ navigation }) => {
           onPress: async () => {
             try {
               const response = await updatePaciente(pacienteId, {
-                activo: newEstado === "activo" ? 1 : 0,
+                activo: newActivo ? 1 : 0,
               });
-              if (response.success) {
-                setPacientes((prev) =>
-                  prev.map((paciente) =>
-                    paciente.id === pacienteId
-                      ? { ...paciente, estado: newEstado }
-                      : paciente
-                  )
-                );
+              
+              if (response.data?.success) {
+                // Recargar todos los pacientes para obtener datos actualizados
+                await loadPacientes();
+                
                 Alert.alert(
                   "Éxito",
                   `Paciente ${
-                    newEstado === "activo" ? "activado" : "desactivado"
+                    newActivo ? "activado" : "desactivado"
                   } correctamente`
                 );
               } else {
                 Alert.alert(
                   "Error",
-                  "No se pudo actualizar el estado del paciente"
+                  `No se pudo actualizar el estado del paciente: ${response.data?.message || 'Error desconocido'}`
                 );
               }
             } catch (error) {
-              console.error("Error updating paciente estado:", error);
               Alert.alert(
                 "Error",
-                "No se pudo actualizar el estado del paciente"
+                `No se pudo actualizar el estado del paciente: ${error.response?.data?.message || error.message || 'Error de conexión'}`
               );
             }
           },
@@ -144,13 +163,16 @@ const GestionPacientesScreen = ({ navigation }) => {
                 Alert.alert("Error", "No se pudo eliminar el paciente");
               }
             } catch (error) {
-              console.error("Error deleting paciente:", error);
               Alert.alert("Error", "No se pudo eliminar el paciente");
             }
           },
         },
       ]
     );
+  };
+
+  const handleCreatePaciente = () => {
+    navigation.navigate("CrearPacienteScreen");
   };
 
   const filteredPacientes = (Array.isArray(pacientes) ? pacientes : []).filter(
@@ -164,8 +186,8 @@ const GestionPacientesScreen = ({ navigation }) => {
 
       const matchesEstado =
         selectedEstado === "todos" ||
-        (selectedEstado === "activo" && paciente.activo) ||
-        (selectedEstado === "inactivo" && !paciente.activo);
+        (selectedEstado === "activo" && paciente.activo === true) ||
+        (selectedEstado === "inactivo" && paciente.activo === false);
 
       return matchesSearch && matchesEstado;
     }
@@ -246,7 +268,7 @@ const GestionPacientesScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() =>
-            navigation.navigate("EditUsuarioScreen", { usuarioId: item.user_id })
+            navigation.navigate("CrearPacienteScreen", { paciente: item })
           }
         >
           <Text style={styles.editButtonText}>Editar</Text>
@@ -259,7 +281,7 @@ const GestionPacientesScreen = ({ navigation }) => {
               ? styles.deactivateButton
               : styles.activateButton,
           ]}
-          onPress={() => handleToggleEstado(item.id, item.activo ? "activo" : "inactivo")}
+          onPress={() => handleToggleEstado(item.id, item.activo)}
         >
           <Text style={styles.toggleButtonText}>
             {item.activo ? "Desactivar" : "Activar"}
@@ -294,7 +316,14 @@ const GestionPacientesScreen = ({ navigation }) => {
     <View style={styles.container}>
       {/* Header con filtros */}
       <View style={styles.header}>
-        <Text style={styles.title}>Gestión de Pacientes</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>Gestión de Pacientes</Text>
+          <ButtonPrimary
+            title="+ Crear Paciente"
+            onPress={handleCreatePaciente}
+            style={styles.createButton}
+          />
+        </View>
 
         {/* Barra de búsqueda */}
         <View style={styles.searchContainer}>
@@ -315,7 +344,9 @@ const GestionPacientesScreen = ({ navigation }) => {
                 styles.filterButton,
                 selectedEstado === estado && styles.activeFilterButton,
               ]}
-              onPress={() => setSelectedEstado(estado)}
+              onPress={() => {
+                setSelectedEstado(estado);
+              }}
             >
               <Text
                 style={[
@@ -333,11 +364,13 @@ const GestionPacientesScreen = ({ navigation }) => {
           ))}
         </View>
 
-        <Text style={styles.resultsText}>
-          {filteredPacientes.length} paciente
-          {filteredPacientes.length !== 1 ? "s" : ""} encontrado
-          {filteredPacientes.length !== 1 ? "s" : ""}
-        </Text>
+        <View style={styles.statusInfo}>
+          <Text style={styles.resultsText}>
+            {filteredPacientes.length} paciente
+            {filteredPacientes.length !== 1 ? "s" : ""} encontrado
+            {filteredPacientes.length !== 1 ? "s" : ""}
+          </Text>
+        </View>
       </View>
 
       {/* Lista de pacientes */}
@@ -370,12 +403,21 @@ const createStyles = (colors) =>
       borderBottomWidth: 1,
       borderBottomColor: colors.lightGray,
     },
+    headerTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 16,
+    },
     title: {
       fontSize: 20,
       fontWeight: "bold",
       color: colors.text,
-      marginBottom: 16,
-      textAlign: "center",
+      flex: 1,
+    },
+    createButton: {
+      backgroundColor: colors.primary,
+      minWidth: 120,
     },
     searchContainer: {
       marginBottom: 12,
@@ -560,6 +602,16 @@ const createStyles = (colors) =>
     },
     emptyList: {
       flexGrow: 1,
+    },
+    statusInfo: {
+      marginTop: 8,
+      paddingHorizontal: 8,
+    },
+    totalText: {
+      fontSize: 12,
+      color: colors.lightGray,
+      textAlign: "center",
+      marginTop: 4,
     },
   });
 

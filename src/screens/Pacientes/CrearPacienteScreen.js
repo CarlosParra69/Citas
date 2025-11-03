@@ -13,7 +13,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthContext } from "../../context/AuthContext";
-import { createPaciente } from "../../api/pacientes";
+import { createPaciente, updatePaciente } from "../../api/pacientes";
 import { uploadAvatar } from "../../api/avatar";
 import {
   saveImageToAvatars,
@@ -27,7 +27,9 @@ import ButtonPrimary from "../../components/ButtonPrimary";
 import GenderSelector from "../../components/GenderSelector";
 import { useThemeColors } from "../../utils/themeColors";
 
-const CrearPacienteScreen = ({ navigation }) => {
+const CrearPacienteScreen = ({ navigation, route }) => {
+  const { paciente } = route.params || {};
+  const isEditing = !!paciente;
   const colors = useThemeColors();
   const { user } = useAuthContext();
   const styles = createStyles(colors);
@@ -46,7 +48,59 @@ const CrearPacienteScreen = ({ navigation }) => {
       );
       return;
     }
-  }, [user]);
+    
+    if (isEditing && paciente) {
+      loadPacienteData();
+    }
+  }, [user, isEditing]);
+
+  const formatFechaNacimiento = (fecha) => {
+    if (!fecha) return "";
+    
+    // Si ya está en formato YYYY-MM-DD, devolver tal como está
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      return fecha;
+    }
+    
+    // Si es un timestamp o formato Date, convertir a YYYY-MM-DD
+    try {
+      const date = new Date(fecha);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+    } catch (error) {
+      console.warn("Error formateando fecha:", error);
+    }
+    
+    return "";
+  };
+
+  const loadPacienteData = () => {
+    if (paciente) {
+      setFormData({
+        nombre: paciente.nombre || "",
+        apellido: paciente.apellido || "",
+        cedula: paciente.cedula || "",
+        fecha_nacimiento: formatFechaNacimiento(paciente.fecha_nacimiento),
+        genero: paciente.genero || "M",
+        telefono: paciente.telefono || "",
+        email: paciente.email || "",
+        direccion: paciente.direccion || "",
+        eps: paciente.eps || "",
+        alergias: paciente.alergias || "",
+        medicamentos_actuales: paciente.medicamentos_actuales || "",
+        antecedentes_medicos: paciente.antecedentes_medicos || "",
+        contacto_emergencia: paciente.contacto_emergencia || "",
+        telefono_emergencia: paciente.telefono_emergencia || "",
+        activo: paciente.activo !== undefined ? paciente.activo : true,
+        password: "",
+        password_confirmation: "",
+      });
+    }
+  };
 
   const [formData, setFormData] = useState({
     nombre: "",
@@ -204,17 +258,20 @@ const CrearPacienteScreen = ({ navigation }) => {
       newErrors.fecha_nacimiento = "La fecha debe tener el formato YYYY-MM-DD";
     }
 
-    if (!formData.password) {
-      newErrors.password = "La contraseña es requerida";
-    } else if (formData.password.length < 6) {
-      newErrors.password = "La contraseña debe tener al menos 6 caracteres";
-    }
+    // Solo validar contraseña si no es modo edición
+    if (!isEditing) {
+      if (!formData.password) {
+        newErrors.password = "La contraseña es requerida";
+      } else if (formData.password.length < 6) {
+        newErrors.password = "La contraseña debe tener al menos 6 caracteres";
+      }
 
-    if (!formData.password_confirmation) {
-      newErrors.password_confirmation =
-        "La confirmación de contraseña es requerida";
-    } else if (formData.password !== formData.password_confirmation) {
-      newErrors.password_confirmation = "Las contraseñas no coinciden";
+      if (!formData.password_confirmation) {
+        newErrors.password_confirmation =
+          "La confirmación de contraseña es requerida";
+      } else if (formData.password !== formData.password_confirmation) {
+        newErrors.password_confirmation = "Las contraseñas no coinciden";
+      }
     }
 
     setErrors(newErrors);
@@ -231,66 +288,21 @@ const CrearPacienteScreen = ({ navigation }) => {
 
     try {
       const dataToSend = { ...formData };
-      const response = await createPaciente(dataToSend);
+      
+      let response;
+      if (isEditing) {
+        response = await updatePaciente(paciente.id, dataToSend);
+      } else {
+        response = await createPaciente(dataToSend);
+      }
 
-      if (response.data.success) {
-        // Buscar el ID del usuario en diferentes estructuras posibles
-        let userId = null;
-        if (response.data?.user?.id) {
-          userId = response.data.user.id;
-        } else if (response.data?.data?.user?.id) {
-          userId = response.data.data.user.id;
-        }
-
-        // Si hay imagen de perfil, subirla después de crear el paciente
-        if (profileImage && userId) {
-          try {
-            const localAvatarPath = await processAndUploadImage(profileImage);
-
-            if (localAvatarPath) {
-              const fileExists = await avatarExists(localAvatarPath);
-
-              if (fileExists) {
-                const formData = new FormData();
-                formData.append("avatar", {
-                  uri: localAvatarPath,
-                  type: "image/jpeg",
-                  name: `avatar_${userId}_${Date.now()}.jpg`,
-                });
-                formData.append("user_id", userId);
-
-                const uploadResult = await uploadAvatar(formData);
-
-                if (uploadResult.success) {
-                  Alert.alert(
-                    "Paciente creado",
-                    "El paciente ha sido creado exitosamente con foto de perfil.",
-                    [
-                      {
-                        text: "OK",
-                        onPress: () => navigation.goBack(),
-                      },
-                    ]
-                  );
-                } else {
-                  Alert.alert(
-                    "Paciente creado",
-                    "El paciente ha sido creado exitosamente, pero no se pudo subir la foto de perfil."
-                  );
-                }
-              }
-            }
-          } catch (imageError) {
-            console.error("Error procesando imagen:", imageError);
-            Alert.alert(
-              "Paciente creado",
-              "El paciente ha sido creado exitosamente, pero ocurrió un error con la imagen de perfil."
-            );
-          }
-        } else {
+      if (response.data?.success) {
+        const action = isEditing ? "actualizado" : "creado";
+        
+        if (isEditing) {
           Alert.alert(
-            "Paciente creado",
-            "El paciente ha sido creado exitosamente. Se han enviado las credenciales de acceso por email.",
+            `Paciente ${action}`,
+            `El paciente ha sido ${action} exitosamente.`,
             [
               {
                 text: "OK",
@@ -298,15 +310,81 @@ const CrearPacienteScreen = ({ navigation }) => {
               },
             ]
           );
+        } else {
+          // Buscar el ID del usuario en diferentes estructuras posibles
+          let userId = null;
+          if (response.data?.user?.id) {
+            userId = response.data.user.id;
+          } else if (response.data?.data?.user?.id) {
+            userId = response.data.data.user.id;
+          }
+
+          // Si hay imagen de perfil, subirla después de crear el paciente
+          if (profileImage && userId) {
+            try {
+              const localAvatarPath = await processAndUploadImage(profileImage);
+
+              if (localAvatarPath) {
+                const fileExists = await avatarExists(localAvatarPath);
+
+                if (fileExists) {
+                  const formData = new FormData();
+                  formData.append("avatar", {
+                    uri: localAvatarPath,
+                    type: "image/jpeg",
+                    name: `avatar_${userId}_${Date.now()}.jpg`,
+                  });
+                  formData.append("user_id", userId);
+
+                  const uploadResult = await uploadAvatar(formData);
+
+                  if (uploadResult.success) {
+                    Alert.alert(
+                      `Paciente ${action}`,
+                      "El paciente ha sido creado exitosamente con foto de perfil.",
+                      [
+                        {
+                          text: "OK",
+                          onPress: () => navigation.goBack(),
+                        },
+                      ]
+                    );
+                  } else {
+                    Alert.alert(
+                      `Paciente ${action}`,
+                      "El paciente ha sido creado exitosamente, pero no se pudo subir la foto de perfil."
+                    );
+                  }
+                }
+              }
+            } catch (imageError) {
+              console.error("Error procesando imagen:", imageError);
+              Alert.alert(
+                `Paciente ${action}`,
+                "El paciente ha sido creado exitosamente, pero ocurrió un error con la imagen de perfil."
+              );
+            }
+          } else {
+            Alert.alert(
+              `Paciente ${action}`,
+              "El paciente ha sido creado exitosamente. Se han enviado las credenciales de acceso por email.",
+              [
+                {
+                  text: "OK",
+                  onPress: () => navigation.goBack(),
+                },
+              ]
+            );
+          }
         }
       } else {
-        throw new Error(response.data.message || "Error al crear paciente");
+        throw new Error(response.data?.message || `Error al ${isEditing ? "actualizar" : "crear"} paciente`);
       }
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || err.message || "Error de conexión";
       Alert.alert("Error", errorMessage);
-      console.error("Error creating paciente:", err);
+      console.error(`Error ${isEditing ? "updating" : "creating"} paciente:`, err);
     } finally {
       setLoading(false);
     }
@@ -323,9 +401,11 @@ const CrearPacienteScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.title}>Crear Nuevo Paciente</Text>
+        <Text style={styles.title}>
+          {isEditing ? "Editar Paciente" : "Crear Nuevo Paciente"}
+        </Text>
         <Text style={styles.subtitle}>
-          Completa la información del paciente
+          {isEditing ? "Modifica la información del paciente" : "Completa la información del paciente"}
         </Text>
 
         {/* Foto de Perfil */}
@@ -436,30 +516,32 @@ const CrearPacienteScreen = ({ navigation }) => {
           />
         </View>
 
-        {/* Credenciales de acceso */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Credenciales de Acceso</Text>
+        {/* Credenciales de acceso - Solo mostrar en modo creación */}
+        {!isEditing && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Credenciales de Acceso</Text>
 
-          <InputField
-            label="Contraseña *"
-            value={formData.password}
-            onChangeText={(value) => handleInputChange("password", value)}
-            error={errors.password}
-            placeholder="Ingresa una contraseña"
-            secureTextEntry
-          />
+            <InputField
+              label="Contraseña *"
+              value={formData.password}
+              onChangeText={(value) => handleInputChange("password", value)}
+              error={errors.password}
+              placeholder="Ingresa una contraseña"
+              secureTextEntry
+            />
 
-          <InputField
-            label="Confirmar Contraseña *"
-            value={formData.password_confirmation}
-            onChangeText={(value) =>
-              handleInputChange("password_confirmation", value)
-            }
-            error={errors.password_confirmation}
-            placeholder="Confirma la contraseña"
-            secureTextEntry
-          />
-        </View>
+            <InputField
+              label="Confirmar Contraseña *"
+              value={formData.password_confirmation}
+              onChangeText={(value) =>
+                handleInputChange("password_confirmation", value)
+              }
+              error={errors.password_confirmation}
+              placeholder="Confirma la contraseña"
+              secureTextEntry
+            />
+          </View>
+        )}
 
         {/* Información médica */}
         <View style={styles.section}>
@@ -529,7 +611,7 @@ const CrearPacienteScreen = ({ navigation }) => {
         </View>
 
         <ButtonPrimary
-          title="Crear Paciente"
+          title={isEditing ? "Actualizar Paciente" : "Crear Paciente"}
           onPress={handleSubmit}
           loading={loading}
           style={styles.submitButton}

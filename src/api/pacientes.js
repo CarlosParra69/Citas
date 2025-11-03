@@ -1,7 +1,21 @@
 import axiosInstance from "../utils/axiosInstance";
 
-export const getPacientes = () => {
-  return axiosInstance.get("/pacientes");
+export const getPacientes = async (filters = {}) => {
+  const params = new URLSearchParams();
+
+  // Solo agregar filtro si se especifica explícitamente
+  if (filters.activo !== undefined && filters.activo !== null) {
+    params.append("activo", filters.activo);
+  }
+  
+  // Agregar otros filtros si se proporcionan
+  if (filters.search) {
+    params.append("search", filters.search);
+  }
+  
+  const url = `/pacientes${params.toString() ? '?' + params.toString() : ''}`;
+  const response = await axiosInstance.get(url);
+  return response.data;
 };
 
 export const getPacienteById = (id) => {

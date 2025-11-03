@@ -6,6 +6,7 @@ import {
   Text,
   RefreshControl,
   Alert,
+  TouchableOpacity,
   TextInput,
 } from "react-native";
 import { getPacientes } from "../../api/pacientes";
@@ -24,6 +25,7 @@ const PacientesScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchText, setSearchText] = useState("");
+  // Eliminar estado de showInactivos
 
   // Actualizar automáticamente cuando la pantalla gane el foco
   useFocusEffect(
@@ -46,14 +48,32 @@ const PacientesScreen = ({ navigation }) => {
   const loadPacientes = async () => {
     try {
       setError(null);
-      const response = await getPacientes();
+      
+      // Cargar todos los pacientes para tener acceso completo
+      const response = await getPacientes({});
 
-      if (response.data?.success) {
-        // La API devuelve datos paginados de Laravel
-        // response.data es el objeto de respuesta, response.data.data es el objeto paginado
-        // response.data.data.data es el array de pacientes
-        const pacientesData = response.data?.data?.data || [];
-        setPacientes(pacientesData);
+      if (response.success && response.data) {
+        // Manejar tanto array directo como paginación
+        let pacientesData = [];
+        
+        if (Array.isArray(response.data)) {
+          // Si response.data es un array directo
+          pacientesData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // Si response.data es un objeto de paginación
+          pacientesData = response.data.data;
+        } else {
+          console.warn("Estructura de datos inesperada:", response.data);
+          pacientesData = [];
+        }
+        
+        // Convertir activo (1/0) a boolean para consistencia
+        const pacientesWithBooleanEstado = pacientesData.map(paciente => ({
+          ...paciente,
+          activo: paciente.activo === 1 || paciente.activo === true
+        }));
+        
+        setPacientes(pacientesWithBooleanEstado);
       } else {
         throw new Error(response.data?.message || "Error al cargar pacientes");
       }
@@ -76,7 +96,6 @@ const PacientesScreen = ({ navigation }) => {
       }
 
       setError(errorMessage);
-      console.error("Error loading pacientes:", err);
     } finally {
       setLoading(false);
     }
@@ -85,21 +104,24 @@ const PacientesScreen = ({ navigation }) => {
   const filterPacientes = () => {
     const pacientesArray = Array.isArray(pacientes) ? pacientes : [];
 
-    if (!searchText.trim()) {
-      setFilteredPacientes(pacientesArray);
-      return;
-    }
-
-    const filtered = pacientesArray.filter((paciente) => {
-      const searchLower = searchText.toLowerCase();
-      const nombreCompleto =
-        `${paciente.nombre} ${paciente.apellido}`.toLowerCase();
-      const cedula = paciente.cedula?.toString() || "";
-
-      return (
-        nombreCompleto.includes(searchLower) || cedula.includes(searchText)
-      );
+    // Filtrar solo pacientes activos
+    let filtered = pacientesArray.filter((paciente) => {
+      return paciente.activo === true;
     });
+
+    // Luego filtrar por búsqueda de texto
+    if (searchText.trim()) {
+      filtered = filtered.filter((paciente) => {
+        const searchLower = searchText.toLowerCase();
+        const nombreCompleto =
+          `${paciente.nombre} ${paciente.apellido}`.toLowerCase();
+        const cedula = paciente.cedula?.toString() || "";
+
+        return (
+          nombreCompleto.includes(searchLower) || cedula.includes(searchText)
+        );
+      });
+    }
 
     setFilteredPacientes(filtered);
   };
@@ -174,6 +196,8 @@ const PacientesScreen = ({ navigation }) => {
           style={styles.createButton}
         />
       </View>
+
+      {/* Eliminar toggle para mostrar inactivos */}
 
       {!filteredPacientes || filteredPacientes.length === 0 ? (
         <View style={styles.emptyContainer}>

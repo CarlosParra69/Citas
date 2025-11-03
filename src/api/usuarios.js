@@ -32,7 +32,7 @@ export const deleteUsuario = async (id) => {
 };
 
 export const cambiarEstadoUsuario = async (id, activo) => {
-  const response = await axiosInstance.patch(`/usuarios/${id}`, {
+  const response = await axiosInstance.patch(`/usuarios/${id}/estado`, {
     activo,
   });
   return response.data;
