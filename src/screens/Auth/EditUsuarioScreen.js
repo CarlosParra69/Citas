@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   Alert,
   TextInput,
-  Switch,
+  Modal,
+  Platform,
 } from "react-native";
 import { useAuthContext } from "../../context/AuthContext";
 import { getUsuarioById, updateUsuario } from "../../api/usuarios";
@@ -30,12 +31,17 @@ const EditUsuarioScreen = ({ navigation, route }) => {
     cedula: "",
     telefono: "",
     rol: "",
-    activo: 1,
     medico_id: null,
     paciente_id: null,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [rolModalVisible, setRolModalVisible] = useState(false);
+
+  const roles = [
+    { value: "paciente", label: "Paciente", color: "#ff9800" },
+    { value: "medico", label: "Médico", color: "#1976d2" },
+  ];
 
   useEffect(() => {
     if (user?.rol === "superadmin") {
@@ -54,10 +60,6 @@ const EditUsuarioScreen = ({ navigation, route }) => {
     }
   }, [user, usuarioId]);
 
-  useEffect(() => {
-    console.log("FormData updated:", formData);
-  }, [formData]);
-
   const loadUsuario = async () => {
     try {
       setLoading(true);
@@ -65,44 +67,37 @@ const EditUsuarioScreen = ({ navigation, route }) => {
       if (response.success) {
         const userData = response.data;
         console.log("User data:", userData);
-        console.log("Loading telefono, paciente_id:", userData.paciente_id, "medico_id:", userData.medico_id);
 
         let telefono = "";
 
         // Cargar teléfono de la tabla específica
         if (userData.paciente_id) {
           const pacienteResponse = await getPacienteById(userData.paciente_id);
-          console.log("Paciente response:", pacienteResponse);
-          console.log("Paciente response success:", pacienteResponse.data.success);
-          if (pacienteResponse.data.success) {
+          if (pacienteResponse.data?.success) {
             telefono = pacienteResponse.data.data.telefono || "";
-            console.log("Telefono from paciente:", telefono);
           }
-        }
-
-        if (userData.medico_id) {
+        } else if (userData.medico_id) {
           const medicoResponse = await getMedicoById(userData.medico_id);
-          console.log("Medico response:", medicoResponse);
-          console.log("Medico response success:", medicoResponse.success);
           if (medicoResponse.success) {
             telefono = medicoResponse.data.telefono || "";
-            console.log("Telefono from medico:", telefono);
           }
         }
 
-        console.log("Setting formData telefono:", telefono);
         const newFormData = {
           nombre: userData.nombre || "",
           apellido: userData.apellido || "",
           email: userData.email || "",
           cedula: userData.cedula || "",
           telefono: telefono,
-          rol: userData.rol || "",
-          activo: userData.activo || 1,
+          // Determinar rol basado en los IDs, permitir edición
+          rol: userData.medico_id ? "medico" : 
+               userData.paciente_id ? "paciente" : 
+               userData.rol || "paciente",
           medico_id: userData.medico_id || null,
           paciente_id: userData.paciente_id || null,
         };
-        console.log("New formData:", newFormData);
+        
+        
         setFormData(newFormData);
       } else {
         Alert.alert("Error", "No se pudo cargar el usuario");
@@ -118,9 +113,6 @@ const EditUsuarioScreen = ({ navigation, route }) => {
   };
 
   const handleInputChange = (field, value) => {
-    if (field === "activo") {
-      value = parseInt(value) || 1;
-    }
     setFormData((prev) => ({
       ...prev,
       [field]: value,
@@ -141,24 +133,23 @@ const EditUsuarioScreen = ({ navigation, route }) => {
 
     try {
       setSaving(true);
-      const response = await updateUsuario(usuarioId, formData);
-      if (response.success) {
-        // Actualizar teléfono en médico o paciente
-        if (formData.rol === "medico" && formData.medico_id) {
-          try {
-            await updateMedico(formData.medico_id, { telefono: formData.telefono });
-          } catch (error) {
-            console.error("Error updating medico telefono:", error);
-          }
-        } else if (formData.rol === "paciente" && formData.paciente_id) {
-          try {
-            await updatePaciente(formData.paciente_id, { telefono: formData.telefono });
-          } catch (error) {
-            console.error("Error updating paciente telefono:", error);
-          }
-        }
+      
+      // Preparar datos para actualizar usuario
+      const usuarioData = {
+        nombre: formData.nombre,
+        apellido: formData.apellido,
+        email: formData.email,
+        cedula: formData.cedula,
+        telefono: formData.telefono,
+      };
 
-        Alert.alert("Éxito", "Usuario actualizado correctamente", [
+      // Actualizar usuario
+      const response = await updateUsuario(usuarioId, usuarioData);
+      if (response.success) {
+        // Sincronización manual con médicos/pacientes
+        await sincronizarDatos();
+        
+        Alert.alert("Éxito", "Usuario actualizado correctamente. Los cambios se han sincronizado con las tablas correspondientes.", [
           {
             text: "OK",
             onPress: () => navigation.goBack(),
@@ -173,6 +164,116 @@ const EditUsuarioScreen = ({ navigation, route }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const sincronizarDatos = async () => {
+    try {
+      // Sincronizar con tabla específica según rol
+      if (formData.rol === "medico" && formData.medico_id) {
+        
+        await updateMedico(formData.medico_id, {
+          nombre: formData.nombre,
+          apellido: formData.apellido,
+          email: formData.email,
+          cedula: formData.cedula,
+          telefono: formData.telefono,
+        });
+      } else if (formData.rol === "paciente" && formData.paciente_id) {
+        
+        await updatePaciente(formData.paciente_id, {
+          nombre: formData.nombre,
+          apellido: formData.apellido,
+          email: formData.email,
+          cedula: formData.cedula,
+          telefono: formData.telefono,
+        });
+      }
+    } catch (error) {
+      console.error("Error en sincronización manual:", error);
+      // No mostrar error al usuario, la sincronización principal fue exitosa
+    }
+  };
+
+  const renderRolSelector = () => {
+    const selectedRole = roles.find(r => r.value === formData.rol);
+    
+    return (
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Rol</Text>
+        <TouchableOpacity
+          style={[
+            styles.rolSelector,
+            { borderColor: selectedRole?.color || colors.lightGray }
+          ]}
+          onPress={() => setRolModalVisible(true)}
+        >
+          <Text
+            style={[
+              styles.rolSelectorText,
+              { color: selectedRole?.color || colors.text }
+            ]}
+          >
+            {selectedRole?.label || "Seleccionar rol"}
+          </Text>
+          <Text style={[styles.rolSelectorArrow, { color: selectedRole?.color || colors.text }]}>
+            ▼
+          </Text>
+        </TouchableOpacity>
+        
+        {/* Modal para seleccionar rol */}
+        <Modal
+          transparent={true}
+          visible={rolModalVisible}
+          animationType="slide"
+          onRequestClose={() => setRolModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: colors.white }]}>
+              <Text style={styles.modalTitle}>Seleccionar Rol</Text>
+              {roles.map((role) => (
+                <TouchableOpacity
+                  key={role.value}
+                  style={[
+                    styles.roleOption,
+                    {
+                      backgroundColor: formData.rol === role.value ? role.color + "20" : colors.background,
+                      borderColor: formData.rol === role.value ? role.color : colors.lightGray,
+                    }
+                  ]}
+                  onPress={() => {
+                    handleInputChange("rol", role.value);
+                    setRolModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.roleOptionText,
+                      {
+                        color: formData.rol === role.value ? role.color : colors.text,
+                        fontWeight: formData.rol === role.value ? "600" : "400",
+                      }
+                    ]}
+                  >
+                    {role.label}
+                  </Text>
+                  {formData.rol === role.value && (
+                    <Text style={[styles.roleOptionCheck, { color: role.color }]}>
+                      ✓
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setRolModalVisible(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    );
   };
 
   if (loading) {
@@ -240,25 +341,9 @@ const EditUsuarioScreen = ({ navigation, route }) => {
           />
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Rol</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.rol}
-            onChangeText={(value) => handleInputChange("rol", value)}
-            placeholder="Ingresa el rol"
-          />
-        </View>
+        {/* Selector de rol mejorado */}
+        {renderRolSelector()}
 
-        <View style={styles.inputGroup}>
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>Activo</Text>
-            <Switch
-              value={formData.activo === 1}
-              onValueChange={(value) => handleInputChange("activo", value ? 1 : 0)}
-            />
-          </View>
-        </View>
       </View>
 
       <View style={styles.buttonContainer}>
@@ -317,10 +402,82 @@ const createStyles = (colors) =>
       fontSize: 16,
       backgroundColor: colors.white,
     },
-    switchContainer: {
+    rolSelector: {
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 12,
+      backgroundColor: colors.white,
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
+    },
+    rolSelectorText: {
+      fontSize: 16,
+      fontWeight: "500",
+    },
+    rolSelectorArrow: {
+      fontSize: 12,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    modalContent: {
+      borderRadius: 12,
+      padding: 20,
+      width: "80%",
+      maxWidth: 300,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: 20,
+      color: colors.text,
+    },
+    roleOption: {
+      borderWidth: 1,
+      borderRadius: 8,
+      padding: 15,
+      marginBottom: 8,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    roleOptionText: {
+      fontSize: 16,
+    },
+    roleOptionCheck: {
+      fontSize: 18,
+      fontWeight: "bold",
+    },
+    modalCancelButton: {
+      marginTop: 10,
+      padding: 12,
+      backgroundColor: colors.lightGray,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    modalCancelButtonText: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: "500",
+    },
+    infoContainer: {
+      backgroundColor: colors.info + "20",
+      borderRadius: 8,
+      padding: 12,
+      marginTop: 8,
+    },
+    infoText: {
+      fontSize: 14,
+      color: colors.text,
+      lineHeight: 20,
+    },
+    infoTitle: {
+      fontWeight: "600",
     },
     buttonContainer: {
       marginBottom: 24,
