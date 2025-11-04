@@ -1,32 +1,46 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import StatCard from "../../components/StatCard";
 import QuickActionCard from "../../components/QuickActionCard";
 import ActivityFeed from "../../components/ActivityFeed";
 import { useThemeColors } from "../../utils/themeColors";
+import { getActividadesRecientes } from "../../api/actividades";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 const MedicoDashboard = ({ dashboardData, navigation }) => {
   const colors = useThemeColors();
   const styles = createStyles(colors);
 
-  // Mock data - en producción vendría de la API
-  const mockActivities = [
-    {
-      title: "Cita completada",
-      description: "Consulta con María González",
-      time: "Hace 30 min",
-    },
-    {
-      title: "Nueva cita pendiente",
-      description: "Aprobación requerida para consulta",
-      time: "Hace 2 horas",
-    },
-    {
-      title: "Cita cancelada",
-      description: "Paciente canceló su cita",
-      time: "Hace 4 horas",
-    },
-  ];
+  // Estados para actividades y carga
+  const [actividadesRecientes, setActividadesRecientes] = useState([]);
+  const [loadingActividades, setLoadingActividades] = useState(true);
+
+  // Cargar actividades recientes desde la API
+  useEffect(() => {
+    const cargarActividades = async () => {
+      try {
+        setLoadingActividades(true);
+        const response = await getActividadesRecientes({
+          tipo: 'medico',
+          limite: 5
+        });
+        
+        if (response.success) {
+          setActividadesRecientes(response.data);
+        } else {
+          console.warn('Error cargando actividades:', response.error);
+          setActividadesRecientes([]);
+        }
+      } catch (error) {
+        console.error('Error al cargar actividades:', error);
+        setActividadesRecientes([]);
+      } finally {
+        setLoadingActividades(false);
+      }
+    };
+
+    cargarActividades();
+  }, []);
 
   const quickActions = [
     {
@@ -126,7 +140,14 @@ const MedicoDashboard = ({ dashboardData, navigation }) => {
       {/* Actividad reciente */}
       <View style={styles.activitySection}>
         <Text style={styles.sectionTitle}>Actividad Reciente</Text>
-        <ActivityFeed activities={mockActivities} useFlatList={false} />
+        {loadingActividades ? (
+          <LoadingSpinner />
+        ) : (
+          <ActivityFeed
+            activities={actividadesRecientes}
+            useFlatList={false}
+          />
+        )}
       </View>
     </ScrollView>
   );
